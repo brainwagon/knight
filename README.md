@@ -42,11 +42,17 @@ make
 - `-w, --width <px>`: Image width (default: 640).
 - `-h, --height <px>`: Image height (default: 480).
 - `-o, --output <file>`: Output filename (default: output.pfm).
+- `-e, --exposure <val>`: Exposure boost in f-stops (default: 0.0). Positive values brighten the image, negative values darken it.
 - `-E, --env`: Generate a cylindrical (equirectangular) environment map of the complete sky (360° azimuth, 180° altitude).
 - `-n, --no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
 - `--help`: Show usage information.
 
 ### Examples:
+**Boost exposure by 2 stops:**
+```bash
+./knight -e 2.0 -o brighter.pfm
+```
+
 **Equirectangular Environment Map:**
 ```bash
 ./knight --env --width 2048 --height 1024 -o sky_env.pfm

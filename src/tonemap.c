@@ -37,7 +37,7 @@ static float smoothstep(float edge0, float edge1, float x) {
     return x * x * (3.0f - 2.0f * x);
 }
 
-void apply_night_post_processing(ImageHDR* src, ImageRGB* dst) {
+void apply_night_post_processing(ImageHDR* src, ImageRGB* dst, float exposure_boost_stops) {
     int count = src->width * src->height;
     
     // 1. Calculate Log-Average Luminance for Auto-Exposure
@@ -67,6 +67,9 @@ void apply_night_post_processing(ImageHDR* src, ImageRGB* dst) {
     // Let's use a key that scales slightly with brightness.
     float key = 0.18f;
     if (L_avg < 1.0e-4f) key = 0.05f; // Dimmer for very dark scenes
+
+    // Apply exposure boost (f-stops)
+    key *= powf(2.0f, exposure_boost_stops);
     
     // 2. Blue Shift (Mesopic)
     float xb = 0.25f;

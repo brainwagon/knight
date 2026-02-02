@@ -20,6 +20,7 @@ void print_help(const char* progname) {
     printf("  -w, --width <px>     Image width (default: 640)\n");
     printf("  -h, --height <px>    Image height (default: 480)\n");
     printf("  -o, --output <file>  Output filename (default: output.pfm)\n");
+    printf("  -e, --exposure <val> Exposure boost in f-stops (default: 0.0)\n");
     printf("  -E, --env            Generate cylindrical environment map\n");
     printf("  -n, --no-moon        Disable moon rendering\n");
     printf("      --help           Show this help\n");
@@ -43,6 +44,7 @@ int main(int argc, char** argv) {
     float fov = 60.0f;
     int width = 640;
     int height = 480;
+    float exposure_boost = 0.0f;
     char* output_filename = "output.pfm";
     bool custom_cam = false;
     bool env_map = false;
@@ -58,6 +60,7 @@ int main(int argc, char** argv) {
         {"width",   required_argument, 0, 'w'},
         {"height",  required_argument, 0, 'h'},
         {"output",  required_argument, 0, 'o'},
+        {"exposure",required_argument, 0, 'e'},
         {"env",     no_argument,       0, 'E'},
         {"no-moon", no_argument,       0, 'n'},
         {"help",    no_argument,       0, '?'},
@@ -65,7 +68,7 @@ int main(int argc, char** argv) {
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:En", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:e:En", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': lat = atof(optarg); break;
             case 'L': lon = atof(optarg); break;
@@ -77,6 +80,7 @@ int main(int argc, char** argv) {
             case 'w': width = atoi(optarg); break;
             case 'h': height = atoi(optarg); break;
             case 'o': output_filename = optarg; break;
+            case 'e': exposure_boost = atof(optarg); break;
             case 'E': env_map = true; break;
             case 'n': render_moon = false; break;
             case '?': print_help(argv[0]); return 0;
@@ -88,6 +92,7 @@ int main(int argc, char** argv) {
     printf("Resolution: %dx%d\n", width, height);
     if (!render_moon) printf("Option: Moon rendering DISABLED.\n");
     printf("Output file: %s\n", output_filename);
+    printf("Exposure boost: %.1f stops\n", exposure_boost);
     
     Atmosphere atm;
     atmosphere_init_default(&atm);
@@ -297,7 +302,7 @@ int main(int argc, char** argv) {
     printf("Tone Mapping...\n");
     apply_glare(hdr);
     ImageRGB* output = image_rgb_create(width, height);
-    apply_night_post_processing(hdr, output);
+    apply_night_post_processing(hdr, output, exposure_boost);
     write_pfm(output_filename, width, height, output->pixels);
     printf("Done. Saved to %s\n", output_filename);
     

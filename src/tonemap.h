@@ -25,7 +25,7 @@ void image_rgb_free(ImageRGB* img);
 // 1. Blue Shift (XYZV -> XYZ modified)
 // 2. Tone map (XYZ -> RGB)
 // 3. Blur (optional)
-void apply_night_post_processing(ImageHDR* src, ImageRGB* dst);
+void apply_night_post_processing(ImageHDR* src, ImageRGB* dst, float exposure_boost_stops);
 
 // Applies a simple glare/bloom effect to bright pixels
 void apply_glare(ImageHDR* img);
