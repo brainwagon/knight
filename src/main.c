@@ -4,6 +4,7 @@
 #include "atmosphere.h"
 #include "tonemap.h"
 #include <getopt.h>
+#include <time.h>
 
 #define FOV 60.0f
 
@@ -12,8 +13,8 @@ void print_help(const char* progname) {
     printf("Options:\n");
     printf("  -l, --lat <deg>      Observer latitude (default: 45.0)\n");
     printf("  -L, --lon <deg>      Observer longitude (default: 0.0)\n");
-    printf("  -d, --date <Y-M-D>   Simulation date (default: 2026-02-17)\n");
-    printf("  -t, --time <hour>    UTC hour (default: 18.25)\n");
+    printf("  -d, --date <Y-M-D>   Simulation date (default: today)\n");
+    printf("  -t, --time <hour>    UTC hour (default: now)\n");
     printf("  -a, --alt <deg>      Viewer altitude (default: 10.0)\n");
     printf("  -z, --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\n");
     printf("  -f, --fov <deg>      Field of view (default: 60.0)\n");
@@ -26,8 +27,15 @@ void print_help(const char* progname) {
 
 int main(int argc, char** argv) {
     bool render_moon = true;
-    int year = 2026, month = 2, day = 17;
-    double hour = 18.25; 
+    
+    // Default to current UTC time
+    time_t now = time(NULL);
+    struct tm* t = gmtime(&now);
+    int year = t->tm_year + 1900;
+    int month = t->tm_mon + 1;
+    int day = t->tm_mday;
+    double hour = t->tm_hour + t->tm_min / 60.0 + t->tm_sec / 3600.0;
+
     double lat = 45.0; 
     double lon = 0.0;
     float cam_alt = 10.0f;
