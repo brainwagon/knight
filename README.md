@@ -34,20 +34,39 @@ make
 ### Options:
 - `-l, --lat <deg>`: Observer latitude (default: 45.0).
 - `-L, --lon <deg>`: Observer longitude (default: 0.0).
-- `-d, --date <YYYY-MM-DD>`: Simulation date (default: 2026-02-17).
-- `-t, --time <hour>`: UTC decimal hour (default: 18.25).
+- `-d, --date <YYYY-MM-DD>`: Simulation date (default: today).
+- `-t, --time <time>`: UTC time. Can be decimal (e.g., 18.25) or `H[:M[:S]]` format (e.g., 18:15:00).
 - `-a, --alt <deg>`: Viewer altitude above horizon (default: 10.0).
 - `-z, --az <deg>`: Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0).
 - `-f, --fov <deg>`: Field of view in degrees (default: 60.0).
 - `-w, --width <px>`: Image width (default: 640).
 - `-h, --height <px>`: Image height (default: 480).
 - `-o, --output <file>`: Output filename (default: output.pfm).
+- `-c, --convert`: Automatically convert the PFM output to a PNG file (requires ImageMagick `convert`).
+- `-T, --track <body|planet>`: Center the camera on a specific celestial body (sun, moon, mercury, venus, mars, jupiter, saturn). Overrides `-a` and `-z`.
 - `-e, --exposure <val>`: Exposure boost in f-stops (default: 0.0). Positive values brighten the image, negative values darken it.
 - `-E, --env`: Generate a cylindrical (equirectangular) environment map of the complete sky (360° azimuth, 180° altitude).
 - `-n, --no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
 - `--help`: Show usage information.
 
+### Environment Variables
+- `KNIGHT_OPTS`: Default command line arguments to use before processing actual arguments.
+  ```bash
+  export KNIGHT_OPTS="-w 1920 -h 1080 -c"
+  ./knight -o desktop.pfm # Automatically uses 1080p and converts to PNG
+  ```
+
 ### Examples:
+**Track the Moon and convert to PNG:**
+```bash
+./knight --track moon -c -o moon_shot.pfm
+```
+
+**Track Jupiter at 1080p:**
+```bash
+./knight --track jupiter -w 1920 -h 1080 -c
+```
+
 **Boost exposure by 2 stops:**
 ```bash
 ./knight -e 2.0 -o brighter.pfm
@@ -60,16 +79,19 @@ make
 
 **Twilight in Los Angeles:**
 ```bash
-./knight -l 34.05 -L -118.24 -t 12.0 -d 2026-06-21 -a 45 -z 180 -f 90 -w 1280 -h 720 -o sunset.pfm
-```
-
-**Deep Night (New Moon):**
-```bash
-./knight -d 2026-02-17 -t 22.0 -a 45 -z 180
+./knight -l 34.05 -L -118.24 -t 12:00:00 -d 2026-06-21 -a 45 -z 180 -f 90 -w 1280 -h 720 -o sunset.pfm
 ```
 
 ## Output
-The program generates `output.pfm`, a Portable Float Map (HDR) image. You can view this file with tools like Photoshop, GIMP, or `display` (ImageMagick).
+The program generates `output.pfm`, a Portable Float Map (HDR) image. If `-c` is used, it also generates `output.png`.
+
+The console output includes astronomical event times (UTC):
+```
+Astro Dawn     : 05:39 UTC
+Sunrise        : 07:20 UTC
+Sunset         : 17:10 UTC
+Astro Dusk     : 18:49 UTC
+```
 
 ## Structure
 - `src/main.c`: Primary entry point, argument parsing, and render loop.
