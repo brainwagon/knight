@@ -26,16 +26,24 @@ make
 
 **Options:**
 - `--no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
+- `--width <px>`: Set image width (default: 640).
+- `--height <px>`: Set image height (default: 480).
+- `--lat <deg>`: Set observer latitude.
+- `--lon <deg>`: Set observer longitude.
+- `--date <YYYY-MM-DD>`: Set simulation date.
+- `--time <hour>`: Set UTC decimal hour.
+- `--alt <deg>`: Set viewer altitude.
+- `--az <deg>`: Set viewer azimuth (0=N, 90=E, 180=S, 270=W).
+- `--fov <deg>`: Set field of view.
 
 This will produce `output.pfm`, a Portable Float Map HDR image.
 
 ## Configuration
 
-The current configuration is hardcoded in `src/main.c`:
-- Date: 2026-02-17 18:15 UTC (Civil Twilight)
+Default simulation parameters:
+- Date: 2026-02-17 18:15 UTC
 - Location: 45°N, 0°E
-- Camera: Facing West at 10° altitude.
-- Resolution: 1280x960
+- Resolution: 640x480
 
 ## Structure
 

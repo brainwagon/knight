@@ -4,22 +4,63 @@
 #include "atmosphere.h"
 #include "tonemap.h"
 
-#define WIDTH 1280
-#define HEIGHT 960
 #define FOV 60.0f
 
 int main(int argc, char** argv) {
     bool render_moon = true;
+    int year = 2026, month = 2, day = 17;
+    double hour = 18.25; 
+    double lat = 45.0; 
+    double lon = 0.0;
+    float cam_alt = 10.0f;
+    float cam_az = 270.0f;
+    float fov = 60.0f;
+    int width = 640;
+    int height = 480;
+    bool custom_cam = false;
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--no-moon") == 0) {
             render_moon = false;
+        } else if (strcmp(argv[i], "--lat") == 0 && i + 1 < argc) {
+            lat = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--lon") == 0 && i + 1 < argc) {
+            lon = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
+            hour = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--date") == 0 && i + 1 < argc) {
+            sscanf(argv[++i], "%d-%d-%d", &year, &month, &day);
+        } else if (strcmp(argv[i], "--alt") == 0 && i + 1 < argc) {
+            cam_alt = atof(argv[++i]);
+            custom_cam = true;
+        } else if (strcmp(argv[i], "--az") == 0 && i + 1 < argc) {
+            cam_az = atof(argv[++i]);
+            custom_cam = true;
+        } else if (strcmp(argv[i], "--fov") == 0 && i + 1 < argc) {
+            fov = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--width") == 0 && i + 1 < argc) {
+            width = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--height") == 0 && i + 1 < argc) {
+            height = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--help") == 0) {
+            printf("Usage: %s [options]\n", argv[0]);
+            printf("Options:\n");
+            printf("  --lat <deg>      Observer latitude (default: 45.0)\n");
+            printf("  --lon <deg>      Observer longitude (default: 0.0)\n");
+            printf("  --date <Y-M-D>   Simulation date (default: 2026-02-17)\n");
+            printf("  --time <hour>    UTC hour (default: 18.25)\n");
+            printf("  --alt <deg>      Viewer altitude (default: 10.0)\n");
+            printf("  --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\n");
+            printf("  --fov <deg>      Field of view (default: 60.0)\n");
+            printf("  --width <px>     Image width (default: 640)\n");
+            printf("  --height <px>    Image height (default: 480)\n");
+            printf("  --no-moon        Disable moon rendering\n");
+            return 0;
         }
     }
 
     printf("Initializing Knight Renderer...\n");
-    if (!render_moon) {
-        printf("Option: Moon rendering DISABLED.\n");
-    }
+    printf("Resolution: %dx%d\n", width, height);
     
     // 1. Setup Data
     Atmosphere atm;
@@ -30,24 +71,16 @@ int main(int argc, char** argv) {
     printf("Loaded %d stars.\n", num_stars);
     
     // 2. Setup Time/Location
-    // 2026-02-17 18:15 UTC (Approx 30 mins after sunset)
-    int year = 2026, month = 2, day = 17;
-    double hour = 18.25; 
-    double lat = 45.0; // 45 deg N
-    double lon = 0.0;  // 0 deg E
     double jd = get_julian_day(year, month, day, hour);
 
     printf("Observer Location: Lat %.2f, Lon %.2f\n", lat, lon);
-    printf("Simulation Time: %04d-%02d-%02d %02d:00 UTC (JD %.2f)\n", year, month, day, (int)hour, jd);
+    printf("Simulation Time: %04d-%02d-%02d %02.2f UTC (JD %.2f)\n", year, month, day, hour, jd);
     
     Vec3 sun_dir, moon_dir;
     sun_moon_position(jd, lat, lon, &sun_dir, &moon_dir);
     
-    printf("Sun Dir (Horizon): %.2f %.2f %.2f\n", sun_dir.x, sun_dir.y, sun_dir.z);
-    printf("Sun Altitude: %.2f degrees\n", asinf(sun_dir.y) * RAD2DEG);
-    
-    printf("Moon Dir (Horizon): %.2f %.2f %.2f\n", moon_dir.x, moon_dir.y, moon_dir.z);
-    printf("Moon Altitude: %.2f degrees\n", asinf(moon_dir.y) * RAD2DEG);
+    printf("Sun Dir (Horizon): %.2f %.2f %.2f (Alt: %.2f deg)\n", sun_dir.x, sun_dir.y, sun_dir.z, asinf(sun_dir.y) * RAD2DEG);
+    printf("Moon Dir (Horizon): %.2f %.2f %.2f (Alt: %.2f deg)\n", moon_dir.x, moon_dir.y, moon_dir.z, asinf(moon_dir.y) * RAD2DEG);
 
     Planet planets[5];
     planets_position(jd, lat, lon, planets);
@@ -59,19 +92,13 @@ int main(int argc, char** argv) {
     
     // Light Sources
     Spectrum sun_intensity;
-    // blackbody_spectrum(5778.0f, &sun_intensity);
-    spectrum_set(&sun_intensity, 100.0f); // High value
+    spectrum_set(&sun_intensity, 100.0f); 
     
     Spectrum moon_intensity;
     float moon_phase_factor = 1.0f;
     if (render_moon) {
-        // Calculate phase angle alpha (Sun-Moon-Earth angle)
-        // elongation = angle between sun and moon from earth
         float cos_elong = vec3_dot(sun_dir, moon_dir);
-        float alpha = acosf(-cos_elong); // phase angle 0 (full) to PI (new)
-        
-        // Lunar phase function f(alpha) from paper
-        // f(alpha) = (1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)))
+        float alpha = acosf(-cos_elong); 
         float a2 = alpha * 0.5f;
         float a4 = alpha * 0.25f;
         if (alpha < 0.01f) moon_phase_factor = 1.0f;
@@ -79,36 +106,39 @@ int main(int argc, char** argv) {
         else {
             moon_phase_factor = (1.0f - sinf(a2) * tanf(a2) * logf(1.0f/tanf(a4)));
         }
-        // Clamp
         if (moon_phase_factor < 0) moon_phase_factor = 0;
 
         moon_intensity = sun_intensity;
-        // Base ratio ~1e-6 * phase factor
         spectrum_mul(&moon_intensity, 1.0e-6f * moon_phase_factor); 
-        
         printf("Moon Phase Factor: %.3f (Alpha: %.1f deg)\n", moon_phase_factor, alpha * RAD2DEG);
     } else {
         spectrum_zero(&moon_intensity);
     }
     
     // 3. Render
-    ImageHDR* hdr = image_hdr_create(WIDTH, HEIGHT);
+    ImageHDR* hdr = image_hdr_create(width, height);
     
-    printf("Field of View: %.1f degrees\n", FOV);
+    printf("Field of View: %.1f degrees\n", fov);
     printf("Rendering Atmosphere...\n");
-    float aspect = (float)WIDTH / (float)HEIGHT;
-    float tan_half_fov = tanf(FOV * 0.5f * DEG2RAD);
+    float aspect = (float)width / (float)height;
+    float tan_half_fov = tanf(fov * 0.5f * DEG2RAD);
     
     // Camera basis
     Vec3 cam_pos = {0, EARTH_RADIUS + 10.0f, 0}; 
-    
-    // Point West (Az = 270) at 10 deg altitude
-    // x = cos(10)sin(270) = -0.9848
-    // y = sin(10) = 0.1736
-    // z = cos(10)cos(270) = 0
-    Vec3 cam_forward = {-0.9848f, 0.1736f, 0.0f};
+    Vec3 cam_forward;
+
+    if (!custom_cam && moon_dir.y > 0) {
+        cam_forward = moon_dir; 
+        printf("Tracking Moon position.\n");
+    } else {
+        float rad_az = cam_az * DEG2RAD;
+        float rad_alt = cam_alt * DEG2RAD;
+        cam_forward.x = cosf(rad_alt) * sinf(rad_az);
+        cam_forward.y = sinf(rad_alt);
+        cam_forward.z = cosf(rad_alt) * cosf(rad_az);
+        printf("Camera Direction: Az %.1f, Alt %.1f\n", cam_az, cam_alt);
+    }
     cam_forward = vec3_normalize(cam_forward);
-    printf("Looking West at 10 degrees altitude.\n");
     
     Vec3 world_up = {0, 1, 0};
     if (fabsf(cam_forward.y) > 0.99f) world_up = (Vec3){0, 0, 1};
@@ -116,11 +146,11 @@ int main(int argc, char** argv) {
     Vec3 cam_right = vec3_normalize(vec3_cross(world_up, cam_forward));
     Vec3 cam_up = vec3_cross(cam_forward, cam_right);
     
-    for (int y = 0; y < HEIGHT; y++) {
-        for (int x = 0; x < WIDTH; x++) {
-            // Screen coords: y=0 is top (+v), y=HEIGHT-1 is bottom (-v)
-            float u = (2.0f * (x + 0.5f) / WIDTH - 1.0f) * aspect * tan_half_fov;
-            float v = (1.0f - 2.0f * (y + 0.5f) / HEIGHT) * tan_half_fov;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            // Screen coords: y=0 is top (+v), y=height-1 is bottom (-v)
+            float u = (2.0f * (x + 0.5f) / width - 1.0f) * aspect * tan_half_fov;
+            float v = (1.0f - 2.0f * (y + 0.5f) / height) * tan_half_fov;
             
             // Ray Dir
             Vec3 dir = vec3_add(cam_forward, vec3_add(vec3_mul(cam_right, u), vec3_mul(cam_up, v)));
@@ -132,9 +162,9 @@ int main(int argc, char** argv) {
             // Ground Plane: If we hit earth, alpha_atm is set to 0 or we can check hit
             float t_e0, t_e1;
             if (ray_sphere_intersect(cam_pos, dir, EARTH_RADIUS, &t_e0, &t_e1)) {
-                // Ground: Very dark grey/brown
+                // Ground: Very dark
                 Spectrum ground;
-                spectrum_set(&ground, 0.001f); 
+                spectrum_set(&ground, 1.0e-8f); 
                 spectrum_add(&L, &ground);
                 alpha_atm = 0.0f; // Ground occludes stars
             }
@@ -167,7 +197,7 @@ int main(int argc, char** argv) {
             }
 
             XYZV xyzv = spectrum_to_xyzv(&L);
-            hdr->pixels[y * WIDTH + x] = xyzv;
+            hdr->pixels[y * width + x] = xyzv;
         }
         if (y % 50 == 0) printf("Row %d\n", y);
     }
@@ -196,10 +226,10 @@ int main(int argc, char** argv) {
             float v = dy / dz;
             
             // Inverse of the top-down projection: y=0 is top (+v)
-            float px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * WIDTH;
-            float py = (1.0f - v / tan_half_fov) * 0.5f * HEIGHT;
+            float px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
+            float py = (1.0f - v / tan_half_fov) * 0.5f * height;
             
-            if (px >= 0 && px < WIDTH && py >= 0 && py < HEIGHT) {
+            if (px >= 0 && px < width && py >= 0 && py < height) {
                 // Check if ground occludes
                 float t0, t1;
                 if (ray_sphere_intersect(cam_pos, s.direction, EARTH_RADIUS, &t0, &t1)) continue;
@@ -207,14 +237,14 @@ int main(int argc, char** argv) {
                 on_screen_stars++;
                 float T = expf(-0.1f / (s.direction.y + 0.01f)); 
                 
-                float ang_w = (2.0f * tanf(FOV * 0.5f * DEG2RAD)) / WIDTH;
-                float ang_h = (2.0f * tanf(FOV * 0.5f * DEG2RAD)) / (WIDTH / aspect);
+                float ang_w = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / width;
+                float ang_h = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / (width / aspect);
                 float solid_angle = ang_w * ang_h; 
                 
                 float flux = powf(10.0f, -0.4f * s.vmag) * 2.0e-5f; 
                 float radiance = flux / solid_angle;
 
-                int idx = (int)py * WIDTH + (int)px;
+                int idx = (int)py * width + (int)px;
                 hdr->pixels[idx].Y += radiance * T;
                 hdr->pixels[idx].X += radiance * T; 
                 hdr->pixels[idx].Z += radiance * T;
@@ -239,22 +269,22 @@ int main(int argc, char** argv) {
         float u = dx / dz;
         float v = dy / dz;
         
-        float px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * WIDTH;
-        float py = (1.0f - v / tan_half_fov) * 0.5f * HEIGHT;
+        float px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
+        float py = (1.0f - v / tan_half_fov) * 0.5f * height;
         
-        if (px >= 0 && px < WIDTH && py >= 0 && py < HEIGHT) {
+        if (px >= 0 && px < width && py >= 0 && py < height) {
             float t0, t1;
             if (ray_sphere_intersect(cam_pos, p.direction, EARTH_RADIUS, &t0, &t1)) continue;
 
             float T = expf(-0.1f / (p.direction.y + 0.01f)); 
-            float ang_w = (2.0f * tanf(FOV * 0.5f * DEG2RAD)) / WIDTH;
-            float ang_h = (2.0f * tanf(FOV * 0.5f * DEG2RAD)) / (WIDTH / aspect);
+            float ang_w = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / width;
+            float ang_h = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / (width / aspect);
             float solid_angle = ang_w * ang_h; 
             
             float flux = powf(10.0f, -0.4f * p.vmag) * 2.0e-5f; 
             float radiance = flux / solid_angle;
 
-            int idx = (int)py * WIDTH + (int)px;
+            int idx = (int)py * width + (int)px;
             hdr->pixels[idx].Y += radiance * T;
             hdr->pixels[idx].X += radiance * T; 
             hdr->pixels[idx].Z += radiance * T;
@@ -267,11 +297,11 @@ int main(int argc, char** argv) {
     printf("Applying Stellar Glare...\n");
     apply_glare(hdr);
     
-    ImageRGB* output = image_rgb_create(WIDTH, HEIGHT);
+    ImageRGB* output = image_rgb_create(width, height);
     apply_night_post_processing(hdr, output);
     
     // 6. Write
-    write_pfm("output.pfm", WIDTH, HEIGHT, output->pixels);
+    write_pfm("output.pfm", width, height, output->pixels);
     printf("Done. Saved to output.pfm\n");
     
     image_hdr_free(hdr);
