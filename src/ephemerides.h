@@ -16,6 +16,17 @@ void sun_moon_position(double jd, double lat, double lon, Vec3* sun_dir, Vec3* m
 // Updates the az, alt, and direction fields of the stars.
 void star_equ_to_horizon(double jd, double lat, double lon, Star* catalog, int n);
 
+typedef struct {
+    const char* name;
+    float ra, dec;
+    float alt, az;
+    float vmag;
+    Vec3 direction;
+} Planet;
+
+// Computes positions and magnitudes for Mercury, Venus, Mars, Jupiter, Saturn
+void planets_position(double jd, double lat, double lon, Planet* planets);
+
 // Greenwich Mean Sidereal Time in radians
 double greenwich_mean_sidereal_time(double jd);
 

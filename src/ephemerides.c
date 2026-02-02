@@ -159,3 +159,85 @@ void star_equ_to_horizon(double jd, double lat, double lon, Star* catalog, int n
         catalog[i].direction.z = cosf(catalog[i].alt) * cosf(catalog[i].az);
     }
 }
+
+// Simplified Orbital Elements (J2000)
+// a: semi-major axis (AU), e: eccentricity, i: inclination (deg), 
+// L: mean longitude (deg), w: longitude of perihelion (deg), N: longitude of ascending node (deg)
+typedef struct {
+    double a, e, i, L, w, N;
+    double da, de, di, dL, dw, dN; // rates per century
+} OrbitalElements;
+
+static const OrbitalElements PLANET_ELEMENTS[] = {
+    {0.387098, 0.205630, 7.0049, 252.2509, 77.4577, 48.3308, 0, 0, -0.0059, 149472.6746, 0.1591, -0.1254}, // Mercury
+    {0.723329, 0.006772, 3.3946, 181.9798, 131.5637, 76.6799, 0, -0.000047, -0.0008, 58517.8156, 0.0050, -0.2781}, // Venus
+    {1.000002, 0.016708, 0.0000, 100.4664, 102.9373, 0.0, 0, -0.000042, -0.0130, 35999.3730, 0.3225, 0.0}, // Earth (for heliocentric)
+    {1.523679, 0.093400, 1.8497, 355.4465, 336.0602, 49.5581, 0, 0.000090, -0.0081, 19140.2993, 0.4439, -0.2925}, // Mars
+    {5.202603, 0.048497, 1.3032, 34.3515, 14.3312, 100.4644, 0.000002, 0.000163, -0.0054, 3034.9056, 0.2155, -0.1989}, // Jupiter
+    {9.554909, 0.055508, 2.4888, 50.0774, 93.0567, 113.6655, -0.000002, -0.000346, -0.0037, 1222.1137, 0.5517, -0.2886} // Saturn
+};
+
+void planets_position(double jd, double lat, double lon, Planet* planets) {
+    double T = (jd - 2451545.0) / 36525.0;
+    double gmst = greenwich_mean_sidereal_time(jd);
+    double lmst = local_mean_sidereal_time(gmst, lon);
+    double eps = 23.439 * DEG2RAD;
+
+    // Earth Position
+    const OrbitalElements* ee = &PLANET_ELEMENTS[2];
+    double e_L = fmod(ee->L + ee->dL * T, 360.0) * DEG2RAD;
+    double e_e = ee->e + ee->de * T;
+    double e_a = ee->a + ee->da * T;
+    double e_w = ee->w + ee->dw * T * DEG2RAD;
+    double e_M = e_L - e_w;
+    double e_E = e_M + e_e * sin(e_M) * (1.0 + e_e * cos(e_M));
+    double e_xv = e_a * (cos(e_E) - e_e);
+    double e_yv = e_a * (sqrt(1.0 - e_e * e_e) * sin(e_E));
+    double xe = e_xv * cos(e_w) - e_yv * sin(e_w);
+    double ye = e_xv * sin(e_w) + e_yv * cos(e_w);
+    double ze = 0;
+
+    const char* names[] = {"Mercury", "Venus", "Mars", "Jupiter", "Saturn"};
+    int idx_map[] = {0, 1, 3, 4, 5};
+
+    for (int i = 0; i < 5; i++) {
+        const OrbitalElements* oe = &PLANET_ELEMENTS[idx_map[i]];
+        double a = oe->a + oe->da * T;
+        double e = oe->e + oe->de * T;
+        double incl = (oe->i + oe->di * T) * DEG2RAD;
+        double L = fmod(oe->L + oe->dL * T, 360.0) * DEG2RAD;
+        double w = (oe->w + oe->dw * T) * DEG2RAD;
+        double N = (oe->N + oe->dN * T) * DEG2RAD;
+
+        double M = L - w;
+        double E = M + e * sin(M) * (1.0 + e * cos(M));
+        double xv = a * (cos(E) - e);
+        double yv = a * (sqrt(1.0 - e * e) * sin(E));
+
+        double xh = xv * (cos(N) * cos(w - N) - sin(N) * sin(w - N) * cos(incl)) - yv * (cos(N) * sin(w - N) + sin(N) * cos(w - N) * cos(incl));
+        double yh = xv * (sin(N) * cos(w - N) + cos(N) * sin(w - N) * cos(incl)) - yv * (sin(N) * sin(w - N) - cos(N) * cos(w - N) * cos(incl));
+        double zh = xv * (sin(w - N) * sin(incl)) + yv * (cos(w - N) * sin(incl));
+
+        // Geocentric
+        double x = xh - xe;
+        double y = yh - ye;
+        double z = zh - ze;
+
+        double RA = atan2(y * cos(eps) - z * sin(eps), x);
+        double Dec = atan2(z * cos(eps) + y * sin(eps), sqrt(x * x + (y * cos(eps) - z * sin(eps)) * (y * cos(eps) - z * sin(eps))));
+
+        planets[i].name = names[i];
+        planets[i].ra = (float)RA;
+        planets[i].dec = (float)Dec;
+
+        equatorial_to_horizon(planets[i].ra, planets[i].dec, lmst, lat, &planets[i].alt, &planets[i].az);
+
+        planets[i].direction.x = cosf(planets[i].alt) * sinf(planets[i].az);
+        planets[i].direction.y = sinf(planets[i].alt);
+        planets[i].direction.z = cosf(planets[i].alt) * cosf(planets[i].az);
+
+        // Simple Magnitudes (approximate)
+        float base_mag[] = {-0.42f, -4.40f, -1.52f, -2.59f, 0.67f};
+        planets[i].vmag = base_mag[i];
+    }
+}

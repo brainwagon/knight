@@ -40,63 +40,89 @@ static float smoothstep(float edge0, float edge1, float x) {
 void apply_night_post_processing(ImageHDR* src, ImageRGB* dst) {
     int count = src->width * src->height;
     
-    // 1. Blue Shift (Mesopic)
-    // Target Scotopic Blue
+    // 1. Calculate Log-Average Luminance for Auto-Exposure
+    float sum_log_Y = 0;
+    int valid_pixels = 0;
+    float delta = 1e-6f;
+    float max_Y = 0;
+
+    for (int i = 0; i < count; i++) {
+        float Y = src->pixels[i].Y;
+        if (Y > 0) {
+            sum_log_Y += logf(delta + Y);
+            valid_pixels++;
+            if (Y > max_Y) max_Y = Y;
+        }
+    }
+    
+    float L_avg = (valid_pixels > 0) ? expf(sum_log_Y / valid_pixels) : 0.001f;
+    
+    // Key value: 0.18 is "middle grey". 
+    // For night, we want it lower, but twilight needs something reasonable.
+    // Let's use a key that scales slightly with brightness.
+    float key = 0.18f;
+    if (L_avg < 0.01f) key = 0.05f; // Dimmer for very dark scenes
+    
+    // 2. Blue Shift (Mesopic)
     float xb = 0.25f;
     float yb = 0.25f;
-    
-    // Exposure
-    float exposure = 1000.0f;
     
     for (int i = 0; i < count; i++) {
         XYZV p = src->pixels[i];
         
         float Y = p.Y;
-        if (Y <= 1e-9f) {
+        if (Y <= 0) {
             dst->pixels[i] = (RGB){0,0,0};
             continue;
         }
         
-        float logY = log10f(Y);
-        
         // Rod saturation s
-        // -2.0 to 0.6
+        float logY = log10f(Y + 1e-9f);
         float s = smoothstep(-2.0f, 0.6f, logY);
         
         // Current chromaticity
-        float sum = p.X + p.Y + p.Z;
-        if (sum == 0) sum = 1.0f;
-        float x = p.X / sum;
-        float y = p.Y / sum;
+        float xyz_sum = p.X + p.Y + p.Z;
+        if (xyz_sum == 0) xyz_sum = 1.0f;
+        float x = p.X / xyz_sum;
+        float y = p.Y / xyz_sum;
         
         // Shift towards blue
         float x_new = (1.0f - s) * xb + s * x;
         float y_new = (1.0f - s) * yb + s * y;
         
-        // Mix Luminance
-        // V is scotopic luminance.
-        // Ymixed = 0.4468 * (1-s) * V + s * Y
+        // Mix Luminance (Purkinje)
         float Y_mixed = 0.4468f * (1.0f - s) * p.V + s * Y;
         
-        // Reconstruct XYZ from x_new, y_new, Y_mixed
+        // Reconstruct XYZ
         if (y_new < 1e-4f) y_new = 1e-4f;
         float new_sum = Y_mixed / y_new;
         float X_final = x_new * new_sum;
         float Z_final = (1.0f - x_new - y_new) * new_sum;
         float Y_final = Y_mixed;
         
-        // Tone Map
-        X_final *= exposure;
-        Y_final *= exposure;
-        Z_final *= exposure;
+        // 3. Reinhard Tone Mapping
+        // Scale by key/L_avg
+        float L_scaled = (Y_final * key) / L_avg;
         
-        // Basic linear to sRGB
+        // Simple Reinhard: L_d = L_s / (1 + L_s)
+        // We use a white point to allow some burning
+        float L_white = 2.0f; 
+        float Y_tonemapped = (L_scaled * (1.0f + L_scaled / (L_white * L_white))) / (1.0f + L_scaled);
+        
+        float scale = Y_tonemapped / (Y_final + 1e-9f);
+        X_final *= scale;
+        Y_final *= scale;
+        Z_final *= scale;
+        
+        // 4. Linear to sRGB and Gamma
         RGB rgb = xyz_to_srgb(X_final, Y_final, Z_final);
         
-        // Gamma correction
         if (rgb.r < 0) rgb.r = 0;
         if (rgb.g < 0) rgb.g = 0;
         if (rgb.b < 0) rgb.b = 0;
+        if (rgb.r > 1) rgb.r = 1;
+        if (rgb.g > 1) rgb.g = 1;
+        if (rgb.b > 1) rgb.b = 1;
         
         rgb.r = powf(rgb.r, 1.0f/2.2f);
         rgb.g = powf(rgb.g, 1.0f/2.2f);
