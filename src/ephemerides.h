@@ -27,6 +27,9 @@ typedef struct {
 // Computes positions and magnitudes for Mercury, Venus, Mars, Jupiter, Saturn
 void planets_position(double jd, double lat, double lon, Planet* planets);
 
+// Returns an English description of the moon phase
+const char* get_moon_phase_name(double jd);
+
 // Greenwich Mean Sidereal Time in radians
 double greenwich_mean_sidereal_time(double jd);
 

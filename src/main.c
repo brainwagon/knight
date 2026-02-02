@@ -20,6 +20,7 @@ void print_help(const char* progname) {
     printf("  -w, --width <px>     Image width (default: 640)\n");
     printf("  -h, --height <px>    Image height (default: 480)\n");
     printf("  -o, --output <file>  Output filename (default: output.pfm)\n");
+    printf("  -c, --convert        Convert PFM to PNG using ImageMagick\n");
     printf("  -e, --exposure <val> Exposure boost in f-stops (default: 0.0)\n");
     printf("  -E, --env            Generate cylindrical environment map\n");
     printf("  -n, --no-moon        Disable moon rendering\n");
@@ -28,6 +29,7 @@ void print_help(const char* progname) {
 
 int main(int argc, char** argv) {
     bool render_moon = true;
+    bool convert_to_png = false;
     
     // Default to current UTC time
     time_t now = time(NULL);
@@ -58,30 +60,32 @@ int main(int argc, char** argv) {
         {"az",      required_argument, 0, 'z'},
         {"fov",     required_argument, 0, 'f'},
         {"width",   required_argument, 0, 'w'},
-        {"height",  required_argument, 0, 'h'},
-        {"output",  required_argument, 0, 'o'},
-        {"exposure",required_argument, 0, 'e'},
-        {"env",     no_argument,       0, 'E'},
-        {"no-moon", no_argument,       0, 'n'},
-        {"help",    no_argument,       0, '?'},
-        {0, 0, 0, 0}
-    };
-
-    int opt;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:e:En", long_options, NULL)) != -1) {
-        switch (opt) {
-            case 'l': lat = atof(optarg); break;
-            case 'L': lon = atof(optarg); break;
-            case 'd': sscanf(optarg, "%d-%d-%d", &year, &month, &day); break;
-            case 't': hour = atof(optarg); break;
-            case 'a': cam_alt = atof(optarg); custom_cam = true; break;
-            case 'z': cam_az = atof(optarg); custom_cam = true; break;
-            case 'f': fov = atof(optarg); break;
-            case 'w': width = atoi(optarg); break;
-            case 'h': height = atoi(optarg); break;
-            case 'o': output_filename = optarg; break;
-            case 'e': exposure_boost = atof(optarg); break;
-            case 'E': env_map = true; break;
+                {"height",  required_argument, 0, 'h'},
+                {"output",  required_argument, 0, 'o'},
+                {"convert", no_argument,       0, 'c'},
+                {"exposure",required_argument, 0, 'e'},
+                {"env",     no_argument,       0, 'E'},
+                {"no-moon", no_argument,       0, 'n'},
+                {"help",    no_argument,       0, '?'},
+                {0, 0, 0, 0}
+            };
+        
+            int opt;
+            while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:ce:En", long_options, NULL)) != -1) {
+                switch (opt) {
+                    case 'l': lat = atof(optarg); break;
+                    case 'L': lon = atof(optarg); break;
+                    case 'd': sscanf(optarg, "%d-%d-%d", &year, &month, &day); break;
+                    case 't': hour = atof(optarg); break;
+                    case 'a': cam_alt = atof(optarg); custom_cam = true; break;
+                    case 'z': cam_az = atof(optarg); custom_cam = true; break;
+                    case 'f': fov = atof(optarg); break;
+                    case 'w': width = atoi(optarg); break;
+                    case 'h': height = atoi(optarg); break;
+                    case 'o': output_filename = optarg; break;
+                    case 'c': convert_to_png = true; break;
+                    case 'e': exposure_boost = atof(optarg); break;
+                    case 'E': env_map = true; break;
             case 'n': render_moon = false; break;
             case '?': print_help(argv[0]); return 0;
             default: break;
@@ -147,7 +151,7 @@ int main(int argc, char** argv) {
         if (moon_phase_factor < 0) moon_phase_factor = 0;
         moon_intensity = sun_intensity;
         spectrum_mul(&moon_intensity, 1.0e-6f * moon_phase_factor); 
-        printf("Moon Phase Factor: %.3f (Alpha: %.1f deg)\n", moon_phase_factor, alpha * RAD2DEG);
+        printf("Moon Phase       : %s (Factor %.3f, Alpha %.1f deg)\n", get_moon_phase_name(jd), moon_phase_factor, alpha * RAD2DEG);
     } else spectrum_zero(&moon_intensity);
     
     ImageHDR* hdr = image_hdr_create(width, height);
@@ -220,14 +224,15 @@ int main(int argc, char** argv) {
                     float dist = sqrtf(dx*dx + dy*dy) / 0.0045f;
                     if (dist <= 1.0f) {
                         float dz = sqrtf(1.0f - dist*dist);
-                        Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, dx/0.0045f), vec3_mul(m_actual_up, dy/0.0045f)), vec3_mul(moon_dir, dz));
+                        Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, dx/0.0045f), vec3_mul(m_actual_up, dy/0.0045f)), vec3_mul(moon_dir, -dz));
                         N = vec3_normalize(N);
                         float albedo = 0.12f;
                         if (moon_tex) albedo = image_sample_bilinear(moon_tex, (atan2f(N.x, N.z) + PI) / TWO_PI, acosf(N.y) / PI) * 0.2f;
                         float ndotl = vec3_dot(N, sun_dir);
                         if (ndotl < 0) ndotl = 0;
                         Spectrum moon_disk = sun_intensity;
-                        spectrum_mul(&moon_disk, albedo * (ndotl + 0.01f) * alpha_atm);
+                        // Add a small amount of earthshine (0.005) to the shadow side
+                        spectrum_mul(&moon_disk, albedo * (ndotl + 0.005f) * alpha_atm);
                         spectrum_add(&L, &moon_disk);
                     }
                 }
@@ -305,6 +310,24 @@ int main(int argc, char** argv) {
     apply_night_post_processing(hdr, output, exposure_boost);
     write_pfm(output_filename, width, height, output->pixels);
     printf("Done. Saved to %s\n", output_filename);
+    
+    if (convert_to_png) {
+        char png_filename[256];
+        strncpy(png_filename, output_filename, sizeof(png_filename) - 1);
+        png_filename[sizeof(png_filename) - 1] = '\0';
+        char* last_dot = strrchr(png_filename, '.');
+        if (last_dot) {
+            *last_dot = '\0';
+        }
+        strcat(png_filename, ".png");
+        
+        char cmd[512];
+        snprintf(cmd, sizeof(cmd), "convert %s %s", output_filename, png_filename);
+        printf("Converting to PNG: %s\n", cmd);
+        if (system(cmd) != 0) {
+            fprintf(stderr, "Error: ImageMagick conversion failed. Is 'convert' installed?\n");
+        }
+    }
     
     image_hdr_free(hdr); image_rgb_free(output); image_free(moon_tex); free(stars);
     return 0;

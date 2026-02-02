@@ -149,14 +149,14 @@ void apply_glare(ImageHDR* img) {
     memcpy(temp, img->pixels, w * h * sizeof(XYZV));
     
     // Threshold to prevent glowing sky
-    float threshold = 0.01f; 
+    float threshold = 0.5f; 
     
     // Sigma for Gaussian
     float sigma = 0.8f;
     float inv_2sigma2 = 1.0f / (2.0f * sigma * sigma);
     
     // Spread factor (total energy redistributed)
-    float spread_factor = 0.15f;
+    float spread_factor = 0.05f;
             
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {

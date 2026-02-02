@@ -241,3 +241,25 @@ void planets_position(double jd, double lat, double lon, Planet* planets) {
         planets[i].vmag = base_mag[i];
     }
 }
+
+const char* get_moon_phase_name(double jd) {
+    double T = (jd - 2451545.0) / 36525.0;
+    // Mean elongation of moon (D) in degrees
+    double D = 297.8501921 + 445267.1114034 * T;
+    D = fmod(D, 360.0);
+    if (D < 0) D += 360.0;
+
+    // D = 0 is New Moon
+    // D = 90 is First Quarter
+    // D = 180 is Full Moon
+    // D = 270 is Last Quarter
+
+    if (D < 6.0 || D > 354.0) return "New Moon";
+    if (D < 84.0) return "Waxing Crescent";
+    if (D < 96.0) return "First Quarter";
+    if (D < 174.0) return "Waxing Gibbous";
+    if (D < 186.0) return "Full Moon";
+    if (D < 264.0) return "Waning Gibbous";
+    if (D < 276.0) return "Last Quarter";
+    return "Waning Crescent";
+}
