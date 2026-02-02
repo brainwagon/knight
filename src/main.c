@@ -163,17 +163,24 @@ int main(int argc, char** argv) {
     Vec3 cam_pos = {0, EARTH_RADIUS + 10.0f, 0}; 
     Vec3 cam_forward;
 
+    float final_cam_alt, final_cam_az;
+
     if (!custom_cam && moon_dir.y > 0) {
         cam_forward = moon_dir; 
+        final_cam_alt = asinf(moon_dir.y) * RAD2DEG;
+        final_cam_az = atan2f(moon_dir.x, moon_dir.z) * RAD2DEG;
+        if (final_cam_az < 0) final_cam_az += 360.0f;
         printf("Tracking Moon position.\n");
     } else {
-        float rad_az = cam_az * DEG2RAD;
-        float rad_alt = cam_alt * DEG2RAD;
+        final_cam_alt = cam_alt;
+        final_cam_az = cam_az;
+        float rad_az = final_cam_az * DEG2RAD;
+        float rad_alt = final_cam_alt * DEG2RAD;
         cam_forward.x = cosf(rad_alt) * sinf(rad_az);
         cam_forward.y = sinf(rad_alt);
         cam_forward.z = cosf(rad_alt) * cosf(rad_az);
-        printf("Camera Direction: Az %.1f, Alt %.1f\n", cam_az, cam_alt);
     }
+    printf("Viewer Position: Alt %6.2f, Az %6.2f\n", final_cam_alt, final_cam_az);
     cam_forward = vec3_normalize(cam_forward);
     
     Vec3 world_up = {0, 1, 0};
