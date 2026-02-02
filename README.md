@@ -30,27 +30,28 @@ make
 ```
 
 ### Options:
-- `--lat <deg>`: Observer latitude (default: 45.0).
-- `--lon <deg>`: Observer longitude (default: 0.0).
-- `--date <YYYY-MM-DD>`: Simulation date (default: 2026-02-17).
-- `--time <hour>`: UTC decimal hour (default: 18.25 / 18:15).
-- `--alt <deg>`: Viewer altitude above horizon (default: 10.0).
-- `--az <deg>`: Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0).
-- `--fov <deg>`: Field of view in degrees (default: 60.0).
-- `--width <px>`: Image width (default: 640).
-- `--height <px>`: Image height (default: 480).
-- `--no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
+- `-l, --lat <deg>`: Observer latitude (default: 45.0).
+- `-L, --lon <deg>`: Observer longitude (default: 0.0).
+- `-d, --date <YYYY-MM-DD>`: Simulation date (default: 2026-02-17).
+- `-t, --time <hour>`: UTC decimal hour (default: 18.25).
+- `-a, --alt <deg>`: Viewer altitude above horizon (default: 10.0).
+- `-z, --az <deg>`: Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0).
+- `-f, --fov <deg>`: Field of view in degrees (default: 60.0).
+- `-w, --width <px>`: Image width (default: 640).
+- `-h, --height <px>`: Image height (default: 480).
+- `-o, --output <file>`: Output filename (default: output.pfm).
+- `-n, --no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
 - `--help`: Show usage information.
 
 ### Examples:
 **Twilight in Los Angeles:**
 ```bash
-./knight --lat 34.05 --lon -118.24 --time 12.0 --date 2026-06-21 --alt 45 --az 180 --fov 90 --width 1280 --height 720
+./knight -l 34.05 -L -118.24 -t 12.0 -d 2026-06-21 -a 45 -z 180 -f 90 -w 1280 -h 720 -o sunset.pfm
 ```
 
 **Deep Night (New Moon):**
 ```bash
-./knight --date 2026-02-17 --time 22.0 --alt 45 --az 180
+./knight -d 2026-02-17 -t 22.0 -a 45 -z 180
 ```
 
 ## Output

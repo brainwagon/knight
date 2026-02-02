@@ -3,8 +3,26 @@
 #include "stars.h"
 #include "atmosphere.h"
 #include "tonemap.h"
+#include <getopt.h>
 
 #define FOV 60.0f
+
+void print_help(const char* progname) {
+    printf("Usage: %s [options]\n", progname);
+    printf("Options:\n");
+    printf("  -l, --lat <deg>      Observer latitude (default: 45.0)\n");
+    printf("  -L, --lon <deg>      Observer longitude (default: 0.0)\n");
+    printf("  -d, --date <Y-M-D>   Simulation date (default: 2026-02-17)\n");
+    printf("  -t, --time <hour>    UTC hour (default: 18.25)\n");
+    printf("  -a, --alt <deg>      Viewer altitude (default: 10.0)\n");
+    printf("  -z, --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\n");
+    printf("  -f, --fov <deg>      Field of view (default: 60.0)\n");
+    printf("  -w, --width <px>     Image width (default: 640)\n");
+    printf("  -h, --height <px>    Image height (default: 480)\n");
+    printf("  -o, --output <file>  Output filename (default: output.pfm)\n");
+    printf("  -n, --no-moon        Disable moon rendering\n");
+    printf("      --help           Show this help\n");
+}
 
 int main(int argc, char** argv) {
     bool render_moon = true;
@@ -17,50 +35,50 @@ int main(int argc, char** argv) {
     float fov = 60.0f;
     int width = 640;
     int height = 480;
+    char* output_filename = "output.pfm";
     bool custom_cam = false;
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--no-moon") == 0) {
-            render_moon = false;
-        } else if (strcmp(argv[i], "--lat") == 0 && i + 1 < argc) {
-            lat = atof(argv[++i]);
-        } else if (strcmp(argv[i], "--lon") == 0 && i + 1 < argc) {
-            lon = atof(argv[++i]);
-        } else if (strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
-            hour = atof(argv[++i]);
-        } else if (strcmp(argv[i], "--date") == 0 && i + 1 < argc) {
-            sscanf(argv[++i], "%d-%d-%d", &year, &month, &day);
-        } else if (strcmp(argv[i], "--alt") == 0 && i + 1 < argc) {
-            cam_alt = atof(argv[++i]);
-            custom_cam = true;
-        } else if (strcmp(argv[i], "--az") == 0 && i + 1 < argc) {
-            cam_az = atof(argv[++i]);
-            custom_cam = true;
-        } else if (strcmp(argv[i], "--fov") == 0 && i + 1 < argc) {
-            fov = atof(argv[++i]);
-        } else if (strcmp(argv[i], "--width") == 0 && i + 1 < argc) {
-            width = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "--height") == 0 && i + 1 < argc) {
-            height = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "--help") == 0) {
-            printf("Usage: %s [options]\n", argv[0]);
-            printf("Options:\n");
-            printf("  --lat <deg>      Observer latitude (default: 45.0)\n");
-            printf("  --lon <deg>      Observer longitude (default: 0.0)\n");
-            printf("  --date <Y-M-D>   Simulation date (default: 2026-02-17)\n");
-            printf("  --time <hour>    UTC hour (default: 18.25)\n");
-            printf("  --alt <deg>      Viewer altitude (default: 10.0)\n");
-            printf("  --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\n");
-            printf("  --fov <deg>      Field of view (default: 60.0)\n");
-            printf("  --width <px>     Image width (default: 640)\n");
-            printf("  --height <px>    Image height (default: 480)\n");
-            printf("  --no-moon        Disable moon rendering\n");
-            return 0;
+    static struct option long_options[] = {
+        {"lat",     required_argument, 0, 'l'},
+        {"lon",     required_argument, 0, 'L'},
+        {"date",    required_argument, 0, 'd'},
+        {"time",    required_argument, 0, 't'},
+        {"alt",     required_argument, 0, 'a'},
+        {"az",      required_argument, 0, 'z'},
+        {"fov",     required_argument, 0, 'f'},
+        {"width",   required_argument, 0, 'w'},
+        {"height",  required_argument, 0, 'h'},
+        {"output",  required_argument, 0, 'o'},
+        {"no-moon", no_argument,       0, 'n'},
+        {"help",    no_argument,       0, '?'},
+        {0, 0, 0, 0}
+    };
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:n", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'l': lat = atof(optarg); break;
+            case 'L': lon = atof(optarg); break;
+            case 'd': sscanf(optarg, "%d-%d-%d", &year, &month, &day); break;
+            case 't': hour = atof(optarg); break;
+            case 'a': cam_alt = atof(optarg); custom_cam = true; break;
+            case 'z': cam_az = atof(optarg); custom_cam = true; break;
+            case 'f': fov = atof(optarg); break;
+            case 'w': width = atoi(optarg); break;
+            case 'h': height = atoi(optarg); break;
+            case 'o': output_filename = optarg; break;
+            case 'n': render_moon = false; break;
+            case '?': print_help(argv[0]); return 0;
+            default: break;
         }
     }
 
     printf("Initializing Knight Renderer...\n");
     printf("Resolution: %dx%d\n", width, height);
+    if (!render_moon) {
+        printf("Option: Moon rendering DISABLED.\n");
+    }
+    printf("Output file: %s\n", output_filename);
     
     // 1. Setup Data
     Atmosphere atm;
@@ -301,8 +319,8 @@ int main(int argc, char** argv) {
     apply_night_post_processing(hdr, output);
     
     // 6. Write
-    write_pfm("output.pfm", width, height, output->pixels);
-    printf("Done. Saved to output.pfm\n");
+    write_pfm(output_filename, width, height, output->pixels);
+    printf("Done. Saved to %s\n", output_filename);
     
     image_hdr_free(hdr);
     image_rgb_free(output);
