@@ -6,11 +6,12 @@ An implementation of "A Physically-Based Night Sky Model" in vanilla C.
 - **Spectral Rendering**: 40 bands (380-780nm) light transport.
 - **Atmosphere**: Rayleigh and Mie scattering with spectral ray marching.
 - **Ephemerides**: Calculation of Sun, Moon, and Planet positions (Mercury, Venus, Mars, Jupiter, Saturn).
-- **Moon Phase**: Dynamic lunar phase and disk shading.
-- **Star Catalog**: Renders stars from the Yale Bright Star Catalog (YBS).
-- **Night Appearance**: Simulates the Purkinje effect (blue shift) and scotopic vision.
-- **Stellar Bloom**: 5x5 Gaussian glare effect for realistic point source appearance.
-- **Auto-Exposure**: Reinhard tone mapping with log-average luminance control.
+- **Moon Phase**: Dynamic lunar phase calculation and shaded disk rendering with earthshine.
+- **Star Catalog**: Renders ~9000 stars from the Yale Bright Star Catalog (YBS).
+- **Night Appearance**: Simulates the Purkinje effect (blue shift) and scotopic vision traits.
+- **Stellar Bloom**: 5x5 Gaussian glare effect for realistic point source (star/planet) appearance.
+- **Auto-Exposure**: Reinhard tone mapping with log-average luminance control to handle everything from deep night to twilight.
+- **Ground Plane**: Includes a basic ground occlusion and horizon definition.
 
 ## Building
 
@@ -21,35 +22,40 @@ make
 ## Running
 
 ```bash
-./knight
+./knight [options]
 ```
 
-**Options:**
+### Options:
+- `--lat <deg>`: Observer latitude (default: 45.0).
+- `--lon <deg>`: Observer longitude (default: 0.0).
+- `--date <YYYY-MM-DD>`: Simulation date (default: 2026-02-17).
+- `--time <hour>`: UTC decimal hour (default: 18.25 / 18:15).
+- `--alt <deg>`: Viewer altitude above horizon (default: 10.0).
+- `--az <deg>`: Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0).
+- `--fov <deg>`: Field of view in degrees (default: 60.0).
+- `--width <px>`: Image width (default: 640).
+- `--height <px>`: Image height (default: 480).
 - `--no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
-- `--width <px>`: Set image width (default: 640).
-- `--height <px>`: Set image height (default: 480).
-- `--lat <deg>`: Set observer latitude.
-- `--lon <deg>`: Set observer longitude.
-- `--date <YYYY-MM-DD>`: Set simulation date.
-- `--time <hour>`: Set UTC decimal hour.
-- `--alt <deg>`: Set viewer altitude.
-- `--az <deg>`: Set viewer azimuth (0=N, 90=E, 180=S, 270=W).
-- `--fov <deg>`: Set field of view.
+- `--help`: Show usage information.
 
-This will produce `output.pfm`, a Portable Float Map HDR image.
+### Examples:
+**Twilight in Los Angeles:**
+```bash
+./knight --lat 34.05 --lon -118.24 --time 12.0 --date 2026-06-21 --alt 45 --az 180 --fov 90 --width 1280 --height 720
+```
 
-## Configuration
+**Deep Night (New Moon):**
+```bash
+./knight --date 2026-02-17 --time 22.0 --alt 45 --az 180
+```
 
-Default simulation parameters:
-- Date: 2026-02-17 18:15 UTC
-- Location: 45°N, 0°E
-- Resolution: 640x480
+## Output
+The program generates `output.pfm`, a Portable Float Map (HDR) image. You can view this file with tools like Photoshop, GIMP, or `display` (ImageMagick).
 
 ## Structure
-
-- `src/core.h/c`: Math, Spectrum, PFM I/O.
-- `src/atmosphere.h/c`: Atmospheric scattering models.
-- `src/ephemerides.h/c`: Sun/Moon/Planet positioning.
-- `src/stars.h/c`: Star catalog parsing.
-- `src/tonemap.h/c`: Night vision post-processing and glare.
-- `src/main.c`: Main render loop and scene setup.
+- `src/main.c`: Primary entry point, argument parsing, and render loop.
+- `src/atmosphere.h/c`: Atmospheric scattering models and ray marching.
+- `src/ephemerides.h/c`: Sun, Moon, and Planet positioning logic.
+- `src/stars.h/c`: Yale Bright Star Catalog parsing.
+- `src/tonemap.h/c`: Auto-exposure, Reinhard tone mapping, blue shift, and Gaussian glare.
+- `src/core.h/c`: Spectral math, vector utilities, and PFM I/O.
