@@ -40,10 +40,16 @@ make
 - `-w, --width <px>`: Image width (default: 640).
 - `-h, --height <px>`: Image height (default: 480).
 - `-o, --output <file>`: Output filename (default: output.pfm).
+- `-E, --env`: Generate a cylindrical (equirectangular) environment map of the complete sky (360° azimuth, 180° altitude).
 - `-n, --no-moon`: Disable Moon rendering and its atmospheric scattering contribution.
 - `--help`: Show usage information.
 
 ### Examples:
+**Equirectangular Environment Map:**
+```bash
+./knight --env --width 2048 --height 1024 -o sky_env.pfm
+```
+
 **Twilight in Los Angeles:**
 ```bash
 ./knight -l 34.05 -L -118.24 -t 12.0 -d 2026-06-21 -a 45 -z 180 -f 90 -w 1280 -h 720 -o sunset.pfm

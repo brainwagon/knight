@@ -21,6 +21,7 @@ void print_help(const char* progname) {
     printf("  -w, --width <px>     Image width (default: 640)\n");
     printf("  -h, --height <px>    Image height (default: 480)\n");
     printf("  -o, --output <file>  Output filename (default: output.pfm)\n");
+    printf("  -E, --env            Generate cylindrical environment map\n");
     printf("  -n, --no-moon        Disable moon rendering\n");
     printf("      --help           Show this help\n");
 }
@@ -45,6 +46,7 @@ int main(int argc, char** argv) {
     int height = 480;
     char* output_filename = "output.pfm";
     bool custom_cam = false;
+    bool env_map = false;
 
     static struct option long_options[] = {
         {"lat",     required_argument, 0, 'l'},
@@ -57,13 +59,14 @@ int main(int argc, char** argv) {
         {"width",   required_argument, 0, 'w'},
         {"height",  required_argument, 0, 'h'},
         {"output",  required_argument, 0, 'o'},
+        {"env",     no_argument,       0, 'E'},
         {"no-moon", no_argument,       0, 'n'},
         {"help",    no_argument,       0, '?'},
         {0, 0, 0, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:En", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': lat = atof(optarg); break;
             case 'L': lon = atof(optarg); break;
@@ -75,6 +78,7 @@ int main(int argc, char** argv) {
             case 'w': width = atoi(optarg); break;
             case 'h': height = atoi(optarg); break;
             case 'o': output_filename = optarg; break;
+            case 'E': env_map = true; break;
             case 'n': render_moon = false; break;
             case '?': print_help(argv[0]); return 0;
             default: break;
@@ -191,13 +195,25 @@ int main(int argc, char** argv) {
     
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            // Screen coords: y=0 is top (+v), y=height-1 is bottom (-v)
-            float u = (2.0f * (x + 0.5f) / width - 1.0f) * aspect * tan_half_fov;
-            float v = (1.0f - 2.0f * (y + 0.5f) / height) * tan_half_fov;
-            
-            // Ray Dir
-            Vec3 dir = vec3_add(cam_forward, vec3_add(vec3_mul(cam_right, u), vec3_mul(cam_up, v)));
-            dir = vec3_normalize(dir);
+            Vec3 dir;
+            if (env_map) {
+                // Equirectangular mapping
+                // x maps to Az (0-360), y maps to Alt (90 to -90)
+                float az_rad = (float)x / width * TWO_PI;
+                float alt_rad = (0.5f - (float)y / height) * PI;
+                dir.x = cosf(alt_rad) * sinf(az_rad);
+                dir.y = sinf(alt_rad);
+                dir.z = cosf(alt_rad) * cosf(az_rad);
+            } else {
+                // Pinhole mapping
+                // Screen coords: y=0 is top (+v), y=height-1 is bottom (-v)
+                float u = (2.0f * (x + 0.5f) / width - 1.0f) * aspect * tan_half_fov;
+                float v = (1.0f - 2.0f * (y + 0.5f) / height) * tan_half_fov;
+                
+                // Ray Dir
+                dir = vec3_add(cam_forward, vec3_add(vec3_mul(cam_right, u), vec3_mul(cam_up, v)));
+                dir = vec3_normalize(dir);
+            }
             
             float alpha_atm = 1.0f;
             Spectrum L = atmosphere_render(&atm, cam_pos, dir, sun_dir, &sun_intensity, moon_dir, &moon_intensity, &alpha_atm);
@@ -218,15 +234,25 @@ int main(int argc, char** argv) {
                 if (cos_theta_moon > 0.99999f) { // approx cos(0.26 deg)
                        // Check if moon is above ground
                        if (moon_dir.y > 0) {
-                           float dx = vec3_dot(dir, cam_right) - vec3_dot(moon_dir, cam_right);
-                           float dy = vec3_dot(dir, cam_up) - vec3_dot(moon_dir, cam_up);
+                           // For env map, we'd need a different shading logic if we want local coordinates on the disk.
+                           // But for a 0.5 deg disk, the error is small if we just use a simplified version.
+                           // Actually, let's just use the same shading logic for both for now.
+                           // The nx, ny calculation depends on cam_right/cam_up which don't exist for env_map.
+                           // We can create a local basis for the moon if env_map is on.
+                           Vec3 m_up = {0, 1, 0};
+                           if (fabsf(moon_dir.y) > 0.99f) m_up = (Vec3){0, 0, 1};
+                           Vec3 m_right = vec3_normalize(vec3_cross(m_up, moon_dir));
+                           Vec3 m_actual_up = vec3_cross(moon_dir, m_right);
+
+                           float dx = vec3_dot(dir, m_right);
+                           float dy = vec3_dot(dir, m_actual_up);
                            float dist = sqrtf(dx*dx + dy*dy) / 0.0045f;
                            if (dist <= 1.0f) {
                                float dz = sqrtf(1.0f - dist*dist);
                                float nx = dx / 0.0045f;
                                float ny = dy / 0.0045f;
                                float nz = dz;
-                               Vec3 N = vec3_add(vec3_add(vec3_mul(cam_right, nx), vec3_mul(cam_up, ny)), vec3_mul(moon_dir, nz));
+                               Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, nx), vec3_mul(m_actual_up, ny)), vec3_mul(moon_dir, nz));
                                N = vec3_normalize(N);
                                float ndotl = vec3_dot(N, sun_dir);
                                if (ndotl < 0) ndotl = 0;
@@ -259,33 +285,52 @@ int main(int argc, char** argv) {
             
             visible_stars++;
 
-            float dx = vec3_dot(s.direction, cam_right);
-            float dy = vec3_dot(s.direction, cam_up);
-            float dz = vec3_dot(s.direction, cam_forward);
-            
-            if (dz <= 0) continue; 
-            
-            float u = dx / dz;
-            float v = dy / dz;
-            
-            // Inverse of the top-down projection: y=0 is top (+v)
-            float px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
-            float py = (1.0f - v / tan_half_fov) * 0.5f * height;
+            float px, py;
+            if (env_map) {
+                // Equirectangular projection
+                float s_az = atan2f(s.direction.x, s.direction.z) * RAD2DEG;
+                if (s_az < 0) s_az += 360.0f;
+                float s_alt = asinf(s.direction.y) * RAD2DEG;
+                
+                px = (s_az / 360.0f) * width;
+                py = (90.0f - s_alt) / 180.0f * height;
+            } else {
+                float dx = vec3_dot(s.direction, cam_right);
+                float dy = vec3_dot(s.direction, cam_up);
+                float dz = vec3_dot(s.direction, cam_forward);
+                
+                if (dz <= 0) continue; 
+                
+                float u = dx / dz;
+                float v = dy / dz;
+                
+                // Inverse of the top-down projection: y=0 is top (+v)
+                px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
+                py = (1.0f - v / tan_half_fov) * 0.5f * height;
+            }
             
             if (px >= 0 && px < width && py >= 0 && py < height) {
-                // Check if ground occludes
                 float t0, t1;
                 if (ray_sphere_intersect(cam_pos, s.direction, EARTH_RADIUS, &t0, &t1)) continue;
 
                 on_screen_stars++;
                 float T = expf(-0.1f / (s.direction.y + 0.01f)); 
                 
-                float ang_w = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / width;
-                float ang_h = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / (width / aspect);
-                float solid_angle = ang_w * ang_h; 
+                // Solid angle for env map varies by cos(alt)
+                float solid_angle;
+                if (env_map) {
+                    float s_alt_rad = asinf(s.direction.y);
+                    float d_az = TWO_PI / width;
+                    float d_alt = PI / height;
+                    solid_angle = d_az * d_alt * cosf(s_alt_rad);
+                } else {
+                    float ang_w = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / width;
+                    float ang_h = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / (width / aspect);
+                    solid_angle = ang_w * ang_h; 
+                }
                 
                 float flux = powf(10.0f, -0.4f * s.vmag) * 2.0e-5f; 
-                float radiance = flux / solid_angle;
+                float radiance = flux / (solid_angle + 1e-12f);
 
                 int idx = (int)py * width + (int)px;
                 hdr->pixels[idx].Y += radiance * T;
@@ -303,29 +348,48 @@ int main(int argc, char** argv) {
         Planet p = planets[i];
         if (p.alt <= 0) continue;
 
-        float dx = vec3_dot(p.direction, cam_right);
-        float dy = vec3_dot(p.direction, cam_up);
-        float dz = vec3_dot(p.direction, cam_forward);
-        
-        if (dz <= 0) continue; 
-        
-        float u = dx / dz;
-        float v = dy / dz;
-        
-        float px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
-        float py = (1.0f - v / tan_half_fov) * 0.5f * height;
+        float px, py;
+        if (env_map) {
+            float p_az = atan2f(p.direction.x, p.direction.z) * RAD2DEG;
+            if (p_az < 0) p_az += 360.0f;
+            float p_alt = asinf(p.direction.y) * RAD2DEG;
+            
+            px = (p_az / 360.0f) * width;
+            py = (90.0f - p_alt) / 180.0f * height;
+        } else {
+            float dx = vec3_dot(p.direction, cam_right);
+            float dy = vec3_dot(p.direction, cam_up);
+            float dz = vec3_dot(p.direction, cam_forward);
+            
+            if (dz <= 0) continue; 
+            
+            float u = dx / dz;
+            float v = dy / dz;
+            
+            px = (u / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
+            py = (1.0f - v / tan_half_fov) * 0.5f * height;
+        }
         
         if (px >= 0 && px < width && py >= 0 && py < height) {
             float t0, t1;
             if (ray_sphere_intersect(cam_pos, p.direction, EARTH_RADIUS, &t0, &t1)) continue;
 
             float T = expf(-0.1f / (p.direction.y + 0.01f)); 
-            float ang_w = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / width;
-            float ang_h = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / (width / aspect);
-            float solid_angle = ang_w * ang_h; 
+            
+            float solid_angle;
+            if (env_map) {
+                float p_alt_rad = asinf(p.direction.y);
+                float d_az = TWO_PI / width;
+                float d_alt = PI / height;
+                solid_angle = d_az * d_alt * cosf(p_alt_rad);
+            } else {
+                float ang_w = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / width;
+                float ang_h = (2.0f * tanf(fov * 0.5f * DEG2RAD)) / (width / aspect);
+                solid_angle = ang_w * ang_h; 
+            }
             
             float flux = powf(10.0f, -0.4f * p.vmag) * 2.0e-5f; 
-            float radiance = flux / solid_angle;
+            float radiance = flux / (solid_angle + 1e-12f);
 
             int idx = (int)py * width + (int)px;
             hdr->pixels[idx].Y += radiance * T;
