@@ -1,0 +1,9 @@
+# Build artifacts
+*.o
+knight
+
+# Output files
+*.pfm
+
+# Temporary files
+.gemini/

@@ -1,0 +1,25 @@
+#ifndef EPHEMERIDES_H
+#define EPHEMERIDES_H
+
+#include "core.h"
+#include "stars.h"
+
+// Computes Julian Day from date
+double get_julian_day(int year, int month, int day, double hour);
+
+// Computes Sun and Moon direction (normalized) in local horizon coordinates (North=Z?, usually Y=Up, Z=North, X=East in standard LH, or similar)
+// We will assume a coordinate system: Y is Up, Z is North, X is East (Right Handed).
+// lat, lon in degrees.
+void sun_moon_position(double jd, double lat, double lon, Vec3* sun_dir, Vec3* moon_dir);
+
+// Transforms star coordinates from Equatorial (RA/Dec) to Horizon (Alt/Az) and Cartesian direction.
+// Updates the az, alt, and direction fields of the stars.
+void star_equ_to_horizon(double jd, double lat, double lon, Star* catalog, int n);
+
+// Greenwich Mean Sidereal Time in radians
+double greenwich_mean_sidereal_time(double jd);
+
+// Local Mean Sidereal Time in radians
+double local_mean_sidereal_time(double gmst, double lon_deg);
+
+#endif
