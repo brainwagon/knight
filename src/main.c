@@ -105,14 +105,24 @@ int main(int argc, char** argv) {
     Vec3 sun_dir, moon_dir;
     sun_moon_position(jd, lat, lon, &sun_dir, &moon_dir);
     
-    printf("Sun Dir (Horizon): %.2f %.2f %.2f (Alt: %.2f deg)\n", sun_dir.x, sun_dir.y, sun_dir.z, asinf(sun_dir.y) * RAD2DEG);
-    printf("Moon Dir (Horizon): %.2f %.2f %.2f (Alt: %.2f deg)\n", moon_dir.x, moon_dir.y, moon_dir.z, asinf(moon_dir.y) * RAD2DEG);
+    float sun_alt = asinf(sun_dir.y) * RAD2DEG;
+    float sun_az = atan2f(sun_dir.x, sun_dir.z) * RAD2DEG;
+    if (sun_az < 0) sun_az += 360.0f;
+
+    float moon_alt = asinf(moon_dir.y) * RAD2DEG;
+    float moon_az = atan2f(moon_dir.x, moon_dir.z) * RAD2DEG;
+    if (moon_az < 0) moon_az += 360.0f;
+
+    printf("Sun Position : Alt %6.2f, Az %6.2f\n", sun_alt, sun_az);
+    printf("Moon Position: Alt %6.2f, Az %6.2f\n", moon_alt, moon_az);
 
     Planet planets[5];
     planets_position(jd, lat, lon, planets);
     for (int i=0; i<5; i++) {
         if (planets[i].alt > 0) {
-            printf("Planet %s: Alt %.1f, Az %.1f, Mag %.1f\n", planets[i].name, planets[i].alt*RAD2DEG, planets[i].az*RAD2DEG, planets[i].vmag);
+            float p_az = planets[i].az * RAD2DEG;
+            if (p_az < 0) p_az += 360.0f;
+            printf("Planet %-8s: Alt %6.2f, Az %6.2f, Mag %5.1f\n", planets[i].name, planets[i].alt*RAD2DEG, p_az, planets[i].vmag);
         }
     }
     
