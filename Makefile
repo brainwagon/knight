@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O3 -g -Isrc
-LDFLAGS = -lm
+LDFLAGS = -lm -ljpeg
 
 SRC = $(wildcard src/*.c)
 OBJ = $(SRC:.c=.o)

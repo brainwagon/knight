@@ -57,11 +57,16 @@ void apply_night_post_processing(ImageHDR* src, ImageRGB* dst) {
     
     float L_avg = (valid_pixels > 0) ? expf(sum_log_Y / valid_pixels) : 0.001f;
     
+    // Clamp L_avg to a minimum floor to avoid over-exposing deep night
+    if (L_avg < 1.0e-5f) L_avg = 1.0e-5f;
+
+    printf("DEBUG: Scene L_avg: %e, MaxY: %e\n", L_avg, max_Y);
+    
     // Key value: 0.18 is "middle grey". 
     // For night, we want it lower, but twilight needs something reasonable.
     // Let's use a key that scales slightly with brightness.
     float key = 0.18f;
-    if (L_avg < 0.01f) key = 0.05f; // Dimmer for very dark scenes
+    if (L_avg < 1.0e-4f) key = 0.05f; // Dimmer for very dark scenes
     
     // 2. Blue Shift (Mesopic)
     float xb = 0.25f;

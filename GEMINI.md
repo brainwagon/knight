@@ -25,6 +25,7 @@ The project is structured into modular components within the `src/` directory:
 *   GCC or compatible C compiler.
 *   `make`.
 *   Standard C math libraries (`-lm`).
+*   `libjpeg` development libraries (`-ljpeg`).
 
 ### Build Command
 To compile the project:

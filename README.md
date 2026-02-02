@@ -19,6 +19,8 @@ An implementation of "A Physically-Based Night Sky Model" in vanilla C.
 
 ## Building
 
+Ensure you have `libjpeg` development headers installed (e.g., `libjpeg-dev` on Ubuntu).
+
 ```bash
 make
 ```
