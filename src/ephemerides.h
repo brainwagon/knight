@@ -30,6 +30,12 @@ void planets_position(double jd, double lat, double lon, Planet* planets);
 // Returns an English description of the moon phase
 const char* get_moon_phase_name(double jd);
 
+// Computes sunrise, sunset, and astronomical dawn/dusk times for a given JD and location.
+// Times are in UTC hours [0, 24].
+void sun_rise_set(double jd, double lat, double lon, 
+                  double* sunrise, double* sunset, 
+                  double* astro_dawn, double* astro_dusk);
+
 // Greenwich Mean Sidereal Time in radians
 double greenwich_mean_sidereal_time(double jd);
 

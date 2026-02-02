@@ -263,3 +263,42 @@ const char* get_moon_phase_name(double jd) {
     if (D < 276.0) return "Last Quarter";
     return "Waning Crescent";
 }
+
+void sun_rise_set(double jd, double lat, double lon, 
+                  double* sunrise, double* sunset, 
+                  double* astro_dawn, double* astro_dusk) {
+    // Start at midnight of the current day
+    double jd_start = floor(jd - 0.5) + 0.5;
+    
+    *sunrise = -1.0; *sunset = -1.0;
+    *astro_dawn = -1.0; *astro_dusk = -1.0;
+
+    float prev_alt = -100.0f;
+    
+    // Scan the day in 10-minute steps to find crossings
+    for (int i = 0; i <= 144; i++) {
+        double current_jd = jd_start + (i / 144.0);
+        double gmst = greenwich_mean_sidereal_time(current_jd);
+        double lmst = local_mean_sidereal_time(gmst, lon);
+        
+        float s_ra, s_dec;
+        get_sun_equatorial(current_jd, &s_ra, &s_dec);
+        
+        float alt, az;
+        equatorial_to_horizon(s_ra, s_dec, lmst, lat, &alt, &az);
+        float alt_deg = alt * RAD2DEG;
+
+        if (i > 0) {
+            // Sunrise/Sunset (~ -0.833 deg for refraction/disk, but -0.5 is close enough for this model)
+            float horizon = -0.833f;
+            if (prev_alt < horizon && alt_deg >= horizon) *sunrise = (i / 144.0) * 24.0;
+            if (prev_alt > horizon && alt_deg <= horizon) *sunset = (i / 144.0) * 24.0;
+
+            // Astronomical Twilight (-18 deg)
+            float astro_limit = -18.0f;
+            if (prev_alt < astro_limit && alt_deg >= astro_limit) *astro_dawn = (i / 144.0) * 24.0;
+            if (prev_alt > astro_limit && alt_deg <= astro_limit) *astro_dusk = (i / 144.0) * 24.0;
+        }
+        prev_alt = alt_deg;
+    }
+}
