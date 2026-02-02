@@ -327,6 +327,14 @@ int main(int argc, char** argv) {
                     }
                 }
             }
+
+            // Render Sun Disk
+            float cos_theta_sun = vec3_dot(dir, sun_dir);
+            if (cos_theta_sun > 0.99999f && sun_dir.y > -0.02f) {
+                Spectrum sun_disk = sun_intensity;
+                spectrum_mul(&sun_disk, alpha_atm);
+                spectrum_add(&L, &sun_disk);
+            }
             hdr->pixels[y * cfg.width + x] = spectrum_to_xyzv(&L);
         }
         if (y % 50 == 0) printf("Row %d\n", y);
