@@ -71,7 +71,16 @@ void parse_args(int argc, char** argv, Config* cfg) {
             case 'l': cfg->lat = atof(optarg); break;
             case 'L': cfg->lon = atof(optarg); break;
             case 'd': sscanf(optarg, "%d-%d-%d", &cfg->year, &cfg->month, &cfg->day); break;
-            case 't': cfg->hour = atof(optarg); break;
+            case 't': 
+                if (strchr(optarg, ':')) {
+                    int h = 0, m = 0;
+                    float s = 0;
+                    sscanf(optarg, "%d:%d:%f", &h, &m, &s);
+                    cfg->hour = h + m / 60.0 + s / 3600.0;
+                } else {
+                    cfg->hour = atof(optarg); 
+                }
+                break;
             case 'a': cfg->cam_alt = atof(optarg); cfg->custom_cam = true; break;
             case 'z': cfg->cam_az = atof(optarg); cfg->custom_cam = true; break;
             case 'f': cfg->fov = atof(optarg); break;
