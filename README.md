@@ -2,6 +2,10 @@
 
 An implementation of "A Physically-Based Night Sky Model" in vanilla C.
 
+## ⚠️ Disclaimer
+
+**This code was written entirely by Gemini CLI** based on a high-level summary of the original "Night Rendering" paper. No serious code review has been performed. It is highly experimental and almost certainly contains physical or algorithmic errors. In particular, the tone-mapping and automatic exposure implementations are approximations and may not accurately reflect the intended results of the original research or realistic photometric behavior.
+
 ## Features
 - **Spectral Rendering**: 40 bands (380-780nm) light transport.
 - **Atmosphere**: Rayleigh and Mie scattering with spectral ray marching.
