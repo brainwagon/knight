@@ -17,8 +17,8 @@ typedef struct {
     float atmosphere_radius;     // 6420 km
 } Atmosphere;
 
-// Setup default Earth atmosphere
-void atmosphere_init_default(Atmosphere* atm);
+// Setup default Earth atmosphere with optional turbidity multiplier (default 1.0)
+void atmosphere_init_default(Atmosphere* atm, float turbidity);
 
 // Computes intersection distances with a sphere
 // Returns true if hit. t0 is near, t1 is far.

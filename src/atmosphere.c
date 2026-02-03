@@ -1,6 +1,6 @@
 #include "atmosphere.h"
 
-void atmosphere_init_default(Atmosphere* atm) {
+void atmosphere_init_default(Atmosphere* atm, float turbidity) {
     atm->earth_radius = EARTH_RADIUS;
     atm->atmosphere_radius = ATM_TOP;
     atm->rayleigh_scale_height = 8000.0f;
@@ -36,7 +36,7 @@ void atmosphere_init_default(Atmosphere* atm) {
         // Let's use 1e-5.
         // atm->beta_mie.s[i] = 2e-5f; 
         float m_fac = powf(550.0f / lambda, 1.3f);
-        atm->beta_mie.s[i] = 2.0e-5f * m_fac; 
+        atm->beta_mie.s[i] = 2.0e-5f * m_fac * turbidity; 
     }
 }
 
