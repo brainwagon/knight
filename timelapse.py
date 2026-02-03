@@ -20,6 +20,18 @@ def run_timelapse():
     print(f"Starting timelapse generation for {date_str}...")
     print(f"Interval: {interval_minutes} minutes")
     
+    # Check for GPU availability
+    gpu_available = False
+    try:
+        help_output = subprocess.check_output(["./knight", "--help"], stderr=subprocess.STDOUT).decode()
+        if "--mode" in help_output:
+            gpu_available = True
+            print("GPU acceleration detected. Using GPU mode.")
+        else:
+            print("GPU acceleration not supported by binary. Using CPU mode.")
+    except Exception:
+        print("Could not check GPU availability. Defaulting to CPU mode.")
+
     frames = []
     # 24 hours * 60 minutes / interval
     total_steps = (24 * 60) // interval_minutes
@@ -46,6 +58,9 @@ def run_timelapse():
             "-c", # Convert to PNG
             "--exposure", "1.0" # Slight boost for visibility
         ]
+        
+        if gpu_available:
+            cmd += ["--mode", "gpu"]
         
         # If you want a fixed view (e.g. looking South), uncomment these and remove tracking logic if desired
         cmd += ["-a", "20", "-z", "180"]
