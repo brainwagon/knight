@@ -175,18 +175,29 @@ __global__ void render_kernel(
     // Logic from main.c:
     float cos_theta_moon = vec3_dot(dir, moon_dir);
     if (cos_theta_moon > 0.99999f && moon_dir.y > 0) {
-         // ...
-         // We'll skip complex texture mapping for now to keep kernel simple
-         // Just a flat disk
-         float ndotl = 1.0f; // Approx
-         float albedo = 0.12f;
-         // spectrum_mul(&moon_disk, albedo * ndotl * alpha_atm);
-         // Note: main.c checks specific distance for disk size
-         // We'll skip for this iteration of GPU port.
-         // Or just add simple disk
-         Spectrum moon_disk = sun_intensity;
-         spectrum_mul(&moon_disk, albedo * alpha_atm); // Full phase approx
-         // spectrum_add(&L, &moon_disk); 
+        Vec3 m_up_vec = {0, 1, 0};
+        if (fabsf(moon_dir.y) > 0.99f) m_up_vec = (Vec3){0, 0, 1};
+        Vec3 m_right = vec3_normalize(vec3_cross(m_up_vec, moon_dir));
+        Vec3 m_actual_up = vec3_cross(moon_dir, m_right);
+        
+        float dx = vec3_dot(dir, m_right);
+        float dy = vec3_dot(dir, m_actual_up);
+        float dist = sqrtf(dx*dx + dy*dy) / 0.0045f;
+        
+        if (dist <= 1.0f) {
+            float dz = sqrtf(1.0f - dist*dist);
+            Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, dx/0.0045f), vec3_mul(m_actual_up, dy/0.0045f)), vec3_mul(moon_dir, -dz));
+            N = vec3_normalize(N);
+            
+            float albedo = 0.12f;
+            float ndotl = vec3_dot(N, sun_dir);
+            if (ndotl < 0) ndotl = 0;
+            
+            Spectrum moon_disk = sun_intensity;
+            // Add a small amount of earthshine (0.005) to the shadow side
+            spectrum_mul(&moon_disk, albedo * (ndotl + 0.005f) * alpha_atm);
+            spectrum_add(&L, &moon_disk);
+        }
     }
     
     // Sun Disk
