@@ -6,6 +6,14 @@ LDFLAGS = -lm -ljpeg
 # Check for nvcc
 HAS_NVCC := $(shell command -v nvcc 2> /dev/null)
 
+# Fallback to standard location
+ifeq ($(HAS_NVCC),)
+  ifneq ($(wildcard /usr/local/cuda/bin/nvcc),)
+    HAS_NVCC = /usr/local/cuda/bin/nvcc
+    NVCC = /usr/local/cuda/bin/nvcc
+  endif
+endif
+
 # User can force enable/disable with CUDA=1 or CUDA=0
 ifdef CUDA
   ifeq ($(CUDA), 1)
