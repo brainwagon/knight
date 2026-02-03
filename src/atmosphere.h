@@ -45,4 +45,7 @@ Spectrum atmosphere_render(
     // We will return a float alpha (luminance transmittance or green channel) for star composition.
 );
 
+// Calculates transmittance from point p to space along direction dir
+Spectrum atmosphere_transmittance(const Atmosphere* atm, Vec3 p, Vec3 dir);
+
 #endif

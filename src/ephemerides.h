@@ -27,6 +27,9 @@ typedef struct {
 // Computes positions and magnitudes for Mercury, Venus, Mars, Jupiter, Saturn
 void planets_position(double jd, double lat, double lon, Planet* planets);
 
+// Returns the Sun's ecliptic longitude in degrees for a given JD
+double get_sun_ecliptic_longitude(double jd);
+
 // Returns an English description of the moon phase
 const char* get_moon_phase_name(double jd);
 

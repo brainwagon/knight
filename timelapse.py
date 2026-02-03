@@ -37,6 +37,7 @@ def run_timelapse():
         # We track the sun to see the movement across the sky
         cmd = [
             "./knight",
+            "-f", "90.",
             "-d", date_str,
             "-t", time_str,
             "-w", "1280",

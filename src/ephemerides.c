@@ -53,6 +53,20 @@ static void get_sun_equatorial(double jd, float* ra, float* dec) {
     *dec = (float)delta;
 }
 
+double get_sun_ecliptic_longitude(double jd) {
+    double n = jd - 2451545.0;
+    double L = 280.460 + 0.9856474 * n; // Mean longitude
+    double g = 357.528 + 0.9856003 * n; // Mean anomaly
+    
+    L = fmod(L, 360.0);
+    g = fmod(g, 360.0);
+    if (L < 0) L += 360.0;
+    if (g < 0) g += 360.0;
+    
+    double lambda = L + 1.915 * sin(g * DEG2RAD) + 0.020 * sin(2 * g * DEG2RAD);
+    return fmod(lambda, 360.0);
+}
+
 // Low precision moon position
 static void get_moon_equatorial(double jd, float* ra, float* dec) {
     // Very simplified, just to get it in the sky roughly

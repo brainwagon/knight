@@ -4,6 +4,7 @@
 #include "atmosphere.h"
 #include "tonemap.h"
 #include "image.h"
+#include "zodiacal.h"
 #include <getopt.h>
 #include <time.h>
 #include <strings.h>
@@ -186,6 +187,12 @@ int main(int argc, char** argv) {
     if (m_az < 0) m_az += 360.0f;
     printf("Moon Position: Alt %6.2f, Az %6.2f\n", m_alt, m_az);
 
+    // Zodiacal parameters
+    double gmst = greenwich_mean_sidereal_time(jd);
+    double lmst = local_mean_sidereal_time(gmst, cfg.lon);
+    float sun_ecl_lon = (float)get_sun_ecliptic_longitude(jd);
+    printf("Sun Ecliptic Lon: %.2f deg\n", sun_ecl_lon);
+
     Planet planets[5];
     planets_position(jd, cfg.lat, cfg.lon, planets);
     for (int i=0; i<5; i++) {
@@ -305,10 +312,66 @@ int main(int argc, char** argv) {
             
             float t_e0, t_e1;
             if (ray_sphere_intersect(cam_pos, dir, EARTH_RADIUS, &t_e0, &t_e1)) {
-                Spectrum ground;
-                spectrum_set(&ground, 1.0e-8f); 
-                spectrum_add(&L, &ground);
+                // Ground Intersection
+                Vec3 p_hit = vec3_add(cam_pos, vec3_mul(dir, t_e0));
+                Vec3 N = vec3_normalize(p_hit); // Normal on sphere
+                
+                Spectrum ground_irradiance;
+                spectrum_zero(&ground_irradiance);
+                
+                // Direct Sun
+                float ndotl_sun = vec3_dot(N, sun_dir);
+                if (ndotl_sun > 0) {
+                    Spectrum t_sun = atmosphere_transmittance(&atm, p_hit, sun_dir);
+                    Spectrum direct_sun = sun_intensity;
+                    spectrum_mul_spec(&direct_sun, &t_sun);
+                    spectrum_mul(&direct_sun, ndotl_sun);
+                    spectrum_add(&ground_irradiance, &direct_sun);
+                }
+                
+                // Direct Moon
+                float ndotl_moon = vec3_dot(N, moon_dir);
+                if (ndotl_moon > 0) {
+                    Spectrum t_moon = atmosphere_transmittance(&atm, p_hit, moon_dir);
+                    Spectrum direct_moon = moon_intensity;
+                    spectrum_mul_spec(&direct_moon, &t_moon);
+                    spectrum_mul(&direct_moon, ndotl_moon);
+                    spectrum_add(&ground_irradiance, &direct_moon);
+                }
+                
+                // Simple Ambient approximation (Hemispherical skylight)
+                Spectrum ambient = sun_intensity; 
+                spectrum_mul(&ambient, 0.0005f * (sun_dir.y > 0 ? sun_dir.y : 0)); // Day ambient
+                
+                Spectrum moon_amb = moon_intensity;
+                spectrum_mul(&moon_amb, 0.0005f * (moon_dir.y > 0 ? moon_dir.y : 0)); // Night ambient
+                
+                spectrum_add(&ambient, &moon_amb);
+                // Add a base low-light ambient (starlight/airglow approx)
+                // Reduced from 1e-4 (Full Moon level) to 2e-7 (Starlight level)
+                Spectrum base_amb; spectrum_set(&base_amb, 2.0e-7f);
+                spectrum_add(&ambient, &base_amb);
+                
+                spectrum_add(&ground_irradiance, &ambient);
+
+                // Lambertian BRDF: Radiance = (Albedo / PI) * Irradiance
+                // Albedo = 0.1 (Asphalt/Dirt)
+                Spectrum ground_rad = ground_irradiance;
+                spectrum_mul(&ground_rad, 0.1f / PI);
+                
+                // Attenuate ground radiance by path to camera
+                spectrum_mul(&ground_rad, alpha_atm);
+                
+                spectrum_add(&L, &ground_rad);
                 alpha_atm = 0.0f; 
+            } else {
+                // Sky / Space View
+                // Add Zodiacal Light (attenuated by atmosphere)
+                if (alpha_atm > 0.0f) {
+                    Spectrum zod = compute_zodiacal_light(dir, sun_dir, sun_ecl_lon, cfg.lat, (float)lmst);
+                    spectrum_mul(&zod, alpha_atm);
+                    spectrum_add(&L, &zod);
+                }
             }
 
             if (cfg.render_moon) {
@@ -326,7 +389,13 @@ int main(int argc, char** argv) {
                         Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, dx/0.0045f), vec3_mul(m_actual_up, dy/0.0045f)), vec3_mul(moon_dir, -dz));
                         N = vec3_normalize(N);
                         float albedo = 0.12f;
-                        if (moon_tex) albedo = image_sample_bilinear(moon_tex, (atan2f(N.x, N.z) + PI) / TWO_PI, acosf(N.y) / PI) * 0.2f;
+                        
+                        // Fix texture mapping to be local to the moon face
+                        float nx_local = dx / 0.0045f;
+                        float ny_local = dy / 0.0045f;
+                        // Use local coordinates for UV (Center face is 0,0,1 local)
+                        if (moon_tex) albedo = image_sample_bilinear(moon_tex, (atan2f(nx_local, dz) + PI) / TWO_PI, acosf(ny_local) / PI) * 0.2f;
+                        
                         float ndotl = vec3_dot(N, sun_dir);
                         if (ndotl < 0) ndotl = 0;
                         Spectrum moon_disk = sun_intensity;

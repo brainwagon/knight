@@ -216,3 +216,27 @@ Spectrum atmosphere_render(
     
     return result;
 }
+
+Spectrum atmosphere_transmittance(const Atmosphere* atm, Vec3 p, Vec3 dir) {
+    Spectrum t;
+    spectrum_set(&t, 1.0f);
+    
+    float t0, t1;
+    if (ray_sphere_intersect(p, dir, atm->atmosphere_radius, &t0, &t1)) {
+        // We are usually inside, so we care about distance to exit (t1? or just ray length if we assume p is inside)
+        // ray_sphere_intersect returns t0, t1 relative to ray origin.
+        // If p is inside, t0 < 0, t1 > 0. Distance is t1.
+        // If p is on ground, t0 ~ 0, t1 > 0.
+        float dist = t1;
+        if (t1 < 0) dist = 0; // Pointing down/away?
+        
+        Spectrum depth_r, depth_m;
+        get_optical_depth(atm, p, dir, dist, &depth_r, &depth_m);
+        
+        for (int i=0; i<SPECTRUM_BANDS; i++) {
+             float tau = depth_r.s[i] + depth_m.s[i];
+             t.s[i] = expf(-tau);
+        }
+    }
+    return t;
+}

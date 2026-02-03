@@ -43,13 +43,13 @@ void apply_night_post_processing(ImageHDR* src, ImageRGB* dst, float exposure_bo
     // 1. Calculate Log-Average Luminance for Auto-Exposure
     float sum_log_Y = 0;
     int valid_pixels = 0;
-    float delta = 1e-6f;
     float max_Y = 0;
 
     for (int i = 0; i < count; i++) {
         float Y = src->pixels[i].Y;
-        if (Y > 0) {
-            sum_log_Y += logf(delta + Y);
+        // Ignore very dark pixels (like the artificial ground ~1e-8) to prevent skewing auto-exposure
+        if (Y > 1e-6f) {
+            sum_log_Y += logf(Y);
             valid_pixels++;
             if (Y > max_Y) max_Y = Y;
         }
@@ -114,7 +114,7 @@ void apply_night_post_processing(ImageHDR* src, ImageRGB* dst, float exposure_bo
         
         // Simple Reinhard: L_d = L_s / (1 + L_s)
         // We use a white point to allow some burning
-        float L_white = 2.0f; 
+        float L_white = 1000.0f; 
         float Y_tonemapped = (L_scaled * (1.0f + L_scaled / (L_white * L_white))) / (1.0f + L_scaled);
         
         float scale = Y_tonemapped / (Y_final + 1e-9f);
