@@ -24,6 +24,7 @@ bool cuda_render_frame(
     Vec3 moon_dir, const Spectrum* moon_intensity,
     float sun_ecl_lon, float cam_lat, float lmst,
     bool env_map,
+    unsigned char* moon_tex_data, int moon_tex_w, int moon_tex_h,
     XYZV* out_pixels // buffer on host to copy results to
 );
 

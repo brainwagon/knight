@@ -318,6 +318,10 @@ int main(int argc, char** argv) {
     if (use_gpu) {
 #ifdef CUDA_ENABLED
         printf("Using GPU for rendering.\n");
+        unsigned char* moon_data = moon_tex ? moon_tex->data : NULL;
+        int moon_w = moon_tex ? moon_tex->width : 0;
+        int moon_h = moon_tex ? moon_tex->height : 0;
+        
         bool ok = cuda_render_frame(
             cfg.width, cfg.height, &atm,
             cam_pos, cam_forward, cam_right, cam_up,
@@ -326,6 +330,7 @@ int main(int argc, char** argv) {
             moon_dir, &moon_intensity,
             sun_ecl_lon, cfg.lat, (float)lmst,
             cfg.env_map,
+            moon_data, moon_w, moon_h,
             hdr->pixels
         );
         if (!ok) {

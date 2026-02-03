@@ -49,12 +49,50 @@ extern "C" void cuda_init() {
 }
 
 XYZV* d_pixels = NULL;
+cudaTextureObject_t moon_tex_obj = 0;
+cudaArray* moon_tex_array = NULL;
 
 extern "C" void cuda_cleanup() {
     if (d_pixels) {
         cudaFree(d_pixels);
         d_pixels = NULL;
     }
+    if (moon_tex_obj) {
+        cudaDestroyTextureObject(moon_tex_obj);
+        moon_tex_obj = 0;
+    }
+    if (moon_tex_array) {
+        cudaFreeArray(moon_tex_array);
+        moon_tex_array = NULL;
+    }
+}
+
+void update_moon_texture(unsigned char* data, int w, int h) {
+    if (!data) return;
+    
+    // Check if re-creation is needed (simplification: just destroy and recreate if exists)
+    // For a static texture, checking if already created is enough.
+    if (moon_tex_obj != 0) return; 
+
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(8, 0, 0, 0, cudaChannelFormatKindUnsigned);
+    cudaMallocArray(&moon_tex_array, &channelDesc, w, h);
+    
+    cudaMemcpyToArray(moon_tex_array, 0, 0, data, w * h * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    
+    struct cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = moon_tex_array;
+    
+    struct cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.addressMode[0] = cudaAddressModeWrap;
+    texDesc.addressMode[1] = cudaAddressModeClamp;
+    texDesc.filterMode = cudaFilterModeLinear;
+    texDesc.readMode = cudaReadModeNormalizedFloat;
+    texDesc.normalizedCoords = 1;
+    
+    cudaCreateTextureObject(&moon_tex_obj, &resDesc, &texDesc, NULL);
 }
 
 __device__ XYZV dev_spectrum_to_xyzv(const Spectrum* s) {
@@ -82,6 +120,7 @@ __global__ void render_kernel(
     Vec3 moon_dir, Spectrum moon_intensity,
     float sun_ecl_lon, float cam_lat, float lmst,
     bool env_map,
+    cudaTextureObject_t moon_tex,
     XYZV* out_pixels
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -161,18 +200,7 @@ __global__ void render_kernel(
         }
     }
     
-    // Moon Disk (Simplified logic from main.c)
-    // Texture mapping is hard on GPU without loading texture to array/texture object.
-    // For MVP, we will render moon disk WITHOUT texture or skip it?
-    // User asked for "using CUDA to speed up rendering".
-    // Moon texture mapping uses `image_sample_bilinear`. That needs the `Image*`.
-    // We can copy the image to device global memory (flat array) and implement bilinear sample.
-    // Or just render a white disk for now.
-    // Let's implement white disk with simple albedo (0.12) to match average.
-    // It's a small detail compared to atmosphere.
-    
-    // Check moon intersection
-    // Logic from main.c:
+    // Moon Disk
     float cos_theta_moon = vec3_dot(dir, moon_dir);
     if (cos_theta_moon > 0.99999f && moon_dir.y > 0) {
         Vec3 m_up_vec = {0, 1, 0};
@@ -190,6 +218,15 @@ __global__ void render_kernel(
             N = vec3_normalize(N);
             
             float albedo = 0.12f;
+            
+            if (moon_tex) {
+                float nx_local = dx / 0.0045f;
+                float ny_local = dy / 0.0045f;
+                float u = (atan2f(nx_local, dz) + PI) / TWO_PI;
+                float v = acosf(ny_local) / PI;
+                albedo = tex2D<float>(moon_tex, u, v) * 0.2f; // Scale to match visual brightness
+            }
+            
             float ndotl = vec3_dot(N, sun_dir);
             if (ndotl < 0) ndotl = 0;
             
@@ -220,15 +257,15 @@ extern "C" bool cuda_render_frame(
     Vec3 moon_dir, const Spectrum* moon_intensity,
     float sun_ecl_lon, float cam_lat, float lmst,
     bool env_map,
+    unsigned char* moon_tex_data, int moon_tex_w, int moon_tex_h,
     XYZV* out_pixels
 ) {
     size_t size = width * height * sizeof(XYZV);
     if (d_pixels == NULL) {
-        cudaMalloc((void**)&d_pixels, size); // Note: naive realloc check
+        cudaMalloc((void**)&d_pixels, size); 
     }
     
-    // Check if size changed? For now assume constant res or simple realloc handled by caller calling cleanup.
-    // Ideally check size.
+    update_moon_texture(moon_tex_data, moon_tex_w, moon_tex_h);
     
     float tan_half_fov = tanf(fov * 0.5f * DEG2RAD);
     
@@ -244,6 +281,7 @@ extern "C" bool cuda_render_frame(
         moon_dir, *moon_intensity,
         sun_ecl_lon, cam_lat, lmst,
         env_map,
+        moon_tex_obj,
         d_pixels
     );
     
