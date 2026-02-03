@@ -31,26 +31,6 @@ static const float CIE_V[40] = {
     0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000  // 680-770
 };
 
-void spectrum_zero(Spectrum* s) {
-    memset(s->s, 0, sizeof(float) * SPECTRUM_BANDS);
-}
-
-void spectrum_set(Spectrum* s, float val) {
-    for (int i = 0; i < SPECTRUM_BANDS; i++) s->s[i] = val;
-}
-
-void spectrum_add(Spectrum* dest, const Spectrum* src) {
-    for (int i = 0; i < SPECTRUM_BANDS; i++) dest->s[i] += src->s[i];
-}
-
-void spectrum_mul(Spectrum* dest, float scalar) {
-    for (int i = 0; i < SPECTRUM_BANDS; i++) dest->s[i] *= scalar;
-}
-
-void spectrum_mul_spec(Spectrum* dest, const Spectrum* src) {
-    for (int i = 0; i < SPECTRUM_BANDS; i++) dest->s[i] *= src->s[i];
-}
-
 void blackbody_spectrum(float tempK, Spectrum* out) {
     // Planck's law: B(lambda, T) = (2hc^2 / lambda^5) * (1 / (exp(hc/(lambda*k*T)) - 1))
     // Constants:

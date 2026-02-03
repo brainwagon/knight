@@ -5,6 +5,7 @@
 #include "tonemap.h"
 #include "image.h"
 #include "zodiacal.h"
+#include "cuda_host.h"
 #include <getopt.h>
 #include <time.h>
 #include <strings.h>
@@ -28,6 +29,7 @@ void print_help(const char* progname) {
     printf("  -E, --env            Generate cylindrical environment map\n");
     printf("  -n, --no-moon        Disable moon rendering\n");
     printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\n");
+    printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\n");
     printf("      --help           Show this help\n");
 }
 
@@ -48,6 +50,7 @@ static struct option long_options[] = {
     {"env",     no_argument,       0, 'E'},
     {"no-moon", no_argument,       0, 'n'},
     {"turbidity", required_argument, 0, 'u'},
+    {"mode",    required_argument, 0, 'M'},
     {"help",    no_argument,       0, '?'},
     {0, 0, 0, 0}
 };
@@ -66,11 +69,12 @@ typedef struct {
     bool custom_cam;
     bool env_map;
     float turbidity;
+    char* mode;
 } Config;
 
 void parse_args(int argc, char** argv, Config* cfg) {
     int opt;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:Enu:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:Enu:M:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': cfg->lat = atof(optarg); break;
             case 'L': cfg->lon = atof(optarg); break;
@@ -97,6 +101,7 @@ void parse_args(int argc, char** argv, Config* cfg) {
             case 'E': cfg->env_map = true; break;
             case 'n': cfg->render_moon = false; break;
             case 'u': cfg->turbidity = atof(optarg); break;
+            case 'M': cfg->mode = optarg; break;
             case '?': print_help(argv[0]); exit(0);
             default: break;
         }
@@ -129,6 +134,7 @@ int main(int argc, char** argv) {
     cfg.custom_cam = false;
     cfg.env_map = false;
     cfg.turbidity = 1.0f;
+    cfg.mode = "cpu";
 
     // 1. Process KNIGHT_OPTS environment variable
     char* env_opts = getenv("KNIGHT_OPTS");
@@ -158,6 +164,7 @@ int main(int argc, char** argv) {
     printf("Output file: %s\n", cfg.output_filename);
     printf("Exposure boost: %.1f stops\n", cfg.exposure_boost);
     printf("Atmospheric Turbidity: %.2f\n", cfg.turbidity);
+    printf("Mode: %s\n", cfg.mode);
     
     Atmosphere atm;
     atmosphere_init_default(&atm, cfg.turbidity);
@@ -297,131 +304,168 @@ int main(int argc, char** argv) {
     Vec3 cam_up = vec3_cross(cam_forward, cam_right);
     
     printf("Rendering Atmosphere...\n");
-    for (int y = 0; y < cfg.height; y++) {
-        for (int x = 0; x < cfg.width; x++) {
-            Vec3 dir;
-            if (cfg.env_map) {
-                float az_rad = (float)x / cfg.width * TWO_PI;
-                float alt_rad = (0.5f - (float)y / cfg.height) * PI;
-                dir.x = cosf(alt_rad) * sinf(az_rad);
-                dir.y = sinf(alt_rad);
-                dir.z = cosf(alt_rad) * cosf(az_rad);
-            } else {
-                float u = (2.0f * (x + 0.5f) / cfg.width - 1.0f) * aspect * tan_half_fov;
-                float v = (1.0f - 2.0f * (y + 0.5f) / cfg.height) * tan_half_fov;
-                dir = vec3_add(cam_forward, vec3_add(vec3_mul(cam_right, u), vec3_mul(cam_up, v)));
-                dir = vec3_normalize(dir);
-            }
-            
-            float alpha_atm = 1.0f;
-            Spectrum L = atmosphere_render(&atm, cam_pos, dir, sun_dir, &sun_intensity, moon_dir, &moon_intensity, &alpha_atm);
-            
-            float t_e0, t_e1;
-            if (ray_sphere_intersect(cam_pos, dir, EARTH_RADIUS, &t_e0, &t_e1)) {
-                // Ground Intersection
-                Vec3 p_hit = vec3_add(cam_pos, vec3_mul(dir, t_e0));
-                Vec3 N = vec3_normalize(p_hit); // Normal on sphere
-                
-                Spectrum ground_irradiance;
-                spectrum_zero(&ground_irradiance);
-                
-                // Direct Sun
-                float ndotl_sun = vec3_dot(N, sun_dir);
-                if (ndotl_sun > 0) {
-                    Spectrum t_sun = atmosphere_transmittance(&atm, p_hit, sun_dir);
-                    Spectrum direct_sun = sun_intensity;
-                    spectrum_mul_spec(&direct_sun, &t_sun);
-                    spectrum_mul(&direct_sun, ndotl_sun);
-                    spectrum_add(&ground_irradiance, &direct_sun);
-                }
-                
-                // Direct Moon
-                float ndotl_moon = vec3_dot(N, moon_dir);
-                if (ndotl_moon > 0) {
-                    Spectrum t_moon = atmosphere_transmittance(&atm, p_hit, moon_dir);
-                    Spectrum direct_moon = moon_intensity;
-                    spectrum_mul_spec(&direct_moon, &t_moon);
-                    spectrum_mul(&direct_moon, ndotl_moon);
-                    spectrum_add(&ground_irradiance, &direct_moon);
-                }
-                
-                // Simple Ambient approximation (Hemispherical skylight)
-                Spectrum ambient = sun_intensity; 
-                spectrum_mul(&ambient, 0.0005f * (sun_dir.y > 0 ? sun_dir.y : 0)); // Day ambient
-                
-                Spectrum moon_amb = moon_intensity;
-                spectrum_mul(&moon_amb, 0.0005f * (moon_dir.y > 0 ? moon_dir.y : 0)); // Night ambient
-                
-                spectrum_add(&ambient, &moon_amb);
-                // Add a base low-light ambient (starlight/airglow approx)
-                // Reduced from 1e-4 (Full Moon level) to 2e-7 (Starlight level)
-                Spectrum base_amb; spectrum_set(&base_amb, 2.0e-7f);
-                spectrum_add(&ambient, &base_amb);
-                
-                spectrum_add(&ground_irradiance, &ambient);
 
-                // Lambertian BRDF: Radiance = (Albedo / PI) * Irradiance
-                // Albedo = 0.1 (Asphalt/Dirt)
-                Spectrum ground_rad = ground_irradiance;
-                spectrum_mul(&ground_rad, 0.1f / PI);
-                
-                // Attenuate ground radiance by path to camera
-                spectrum_mul(&ground_rad, alpha_atm);
-                
-                spectrum_add(&L, &ground_rad);
-                alpha_atm = 0.0f; 
-            } else {
-                // Sky / Space View
-                // Add Zodiacal Light (attenuated by atmosphere)
-                if (alpha_atm > 0.0f) {
-                    Spectrum zod = compute_zodiacal_light(dir, sun_dir, sun_ecl_lon, cfg.lat, (float)lmst);
-                    spectrum_mul(&zod, alpha_atm);
-                    spectrum_add(&L, &zod);
-                }
-            }
+    bool use_gpu = false;
+    if (strcasecmp(cfg.mode, "gpu") == 0) {
+#ifdef CUDA_ENABLED
+        use_gpu = true;
+        cuda_init();
+#else
+        printf("Warning: CUDA not enabled. Falling back to CPU.\n");
+#endif
+    }
 
-            if (cfg.render_moon) {
-                float cos_theta_moon = vec3_dot(dir, moon_dir);
-                if (cos_theta_moon > 0.99999f && moon_dir.y > 0) {
-                    Vec3 m_up_vec = {0, 1, 0};
-                    if (fabsf(moon_dir.y) > 0.99f) m_up_vec = (Vec3){0, 0, 1};
-                    Vec3 m_right = vec3_normalize(vec3_cross(m_up_vec, moon_dir));
-                    Vec3 m_actual_up = vec3_cross(moon_dir, m_right);
-                    float dx = vec3_dot(dir, m_right);
-                    float dy = vec3_dot(dir, m_actual_up);
-                    float dist = sqrtf(dx*dx + dy*dy) / 0.0045f;
-                    if (dist <= 1.0f) {
-                        float dz = sqrtf(1.0f - dist*dist);
-                        Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, dx/0.0045f), vec3_mul(m_actual_up, dy/0.0045f)), vec3_mul(moon_dir, -dz));
-                        N = vec3_normalize(N);
-                        float albedo = 0.12f;
-                        
-                        // Fix texture mapping to be local to the moon face
-                        float nx_local = dx / 0.0045f;
-                        float ny_local = dy / 0.0045f;
-                        // Use local coordinates for UV (Center face is 0,0,1 local)
-                        if (moon_tex) albedo = image_sample_bilinear(moon_tex, (atan2f(nx_local, dz) + PI) / TWO_PI, acosf(ny_local) / PI) * 0.2f;
-                        
-                        float ndotl = vec3_dot(N, sun_dir);
-                        if (ndotl < 0) ndotl = 0;
-                        Spectrum moon_disk = sun_intensity;
-                        // Add a small amount of earthshine (0.005) to the shadow side
-                        spectrum_mul(&moon_disk, albedo * (ndotl + 0.005f) * alpha_atm);
-                        spectrum_add(&L, &moon_disk);
+    if (use_gpu) {
+#ifdef CUDA_ENABLED
+        printf("Using GPU for rendering.\n");
+        bool ok = cuda_render_frame(
+            cfg.width, cfg.height, &atm,
+            cam_pos, cam_forward, cam_right, cam_up,
+            cfg.fov, aspect,
+            sun_dir, &sun_intensity,
+            moon_dir, &moon_intensity,
+            sun_ecl_lon, cfg.lat, (float)lmst,
+            cfg.env_map,
+            hdr->pixels
+        );
+        if (!ok) {
+            printf("GPU Rendering failed.\n");
+        }
+#endif
+    } else {
+        // CPU Rendering Loop
+        for (int y = 0; y < cfg.height; y++) {
+            for (int x = 0; x < cfg.width; x++) {
+                Vec3 dir;
+                if (cfg.env_map) {
+                    float az_rad = (float)x / cfg.width * TWO_PI;
+                    float alt_rad = (0.5f - (float)y / cfg.height) * PI;
+                    dir.x = cosf(alt_rad) * sinf(az_rad);
+                    dir.y = sinf(alt_rad);
+                    dir.z = cosf(alt_rad) * cosf(az_rad);
+                } else {
+                    float u = (2.0f * (x + 0.5f) / cfg.width - 1.0f) * aspect * tan_half_fov;
+                    float v = (1.0f - 2.0f * (y + 0.5f) / cfg.height) * tan_half_fov;
+                    dir = vec3_add(cam_forward, vec3_add(vec3_mul(cam_right, u), vec3_mul(cam_up, v)));
+                    dir = vec3_normalize(dir);
+                }
+                
+                float alpha_atm = 1.0f;
+                Spectrum L = atmosphere_render(&atm, cam_pos, dir, sun_dir, &sun_intensity, moon_dir, &moon_intensity, &alpha_atm);
+                
+                float t_e0, t_e1;
+                if (ray_sphere_intersect(cam_pos, dir, EARTH_RADIUS, &t_e0, &t_e1)) {
+                    // Ground Intersection
+                    Vec3 p_hit = vec3_add(cam_pos, vec3_mul(dir, t_e0));
+                    Vec3 N = vec3_normalize(p_hit); // Normal on sphere
+                    
+                    Spectrum ground_irradiance;
+                    spectrum_zero(&ground_irradiance);
+                    
+                    // Direct Sun
+                    float ndotl_sun = vec3_dot(N, sun_dir);
+                    if (ndotl_sun > 0) {
+                        Spectrum t_sun = atmosphere_transmittance(&atm, p_hit, sun_dir);
+                        Spectrum direct_sun = sun_intensity;
+                        spectrum_mul_spec(&direct_sun, &t_sun);
+                        spectrum_mul(&direct_sun, ndotl_sun);
+                        spectrum_add(&ground_irradiance, &direct_sun);
+                    }
+                    
+                    // Direct Moon
+                    float ndotl_moon = vec3_dot(N, moon_dir);
+                    if (ndotl_moon > 0) {
+                        Spectrum t_moon = atmosphere_transmittance(&atm, p_hit, moon_dir);
+                        Spectrum direct_moon = moon_intensity;
+                        spectrum_mul_spec(&direct_moon, &t_moon);
+                        spectrum_mul(&direct_moon, ndotl_moon);
+                        spectrum_add(&ground_irradiance, &direct_moon);
+                    }
+                    
+                    // Simple Ambient approximation (Hemispherical skylight)
+                    Spectrum ambient = sun_intensity; 
+                    spectrum_mul(&ambient, 0.0005f * (sun_dir.y > 0 ? sun_dir.y : 0)); // Day ambient
+                    
+                    Spectrum moon_amb = moon_intensity;
+                    spectrum_mul(&moon_amb, 0.0005f * (moon_dir.y > 0 ? moon_dir.y : 0)); // Night ambient
+                    
+                    spectrum_add(&ambient, &moon_amb);
+                    // Add a base low-light ambient (starlight/airglow approx)
+                    // Reduced from 1e-4 (Full Moon level) to 2e-7 (Starlight level)
+                    Spectrum base_amb; spectrum_set(&base_amb, 2.0e-7f);
+                    spectrum_add(&ambient, &base_amb);
+                    
+                    spectrum_add(&ground_irradiance, &ambient);
+
+                    // Lambertian BRDF: Radiance = (Albedo / PI) * Irradiance
+                    // Albedo = 0.1 (Asphalt/Dirt)
+                    Spectrum ground_rad = ground_irradiance;
+                    spectrum_mul(&ground_rad, 0.1f / PI);
+                    
+                    // Attenuate ground radiance by path to camera
+                    spectrum_mul(&ground_rad, alpha_atm);
+                    
+                    spectrum_add(&L, &ground_rad);
+                    alpha_atm = 0.0f; 
+                } else {
+                    // Sky / Space View
+                    // Add Zodiacal Light (attenuated by atmosphere)
+                    if (alpha_atm > 0.0f) {
+                        Spectrum zod = compute_zodiacal_light(dir, sun_dir, sun_ecl_lon, cfg.lat, (float)lmst);
+                        spectrum_mul(&zod, alpha_atm);
+                        spectrum_add(&L, &zod);
                     }
                 }
-            }
 
-            // Render Sun Disk
-            float cos_theta_sun = vec3_dot(dir, sun_dir);
-            if (cos_theta_sun > 0.99999f && sun_dir.y > -0.02f) {
-                Spectrum sun_disk = sun_intensity;
-                spectrum_mul(&sun_disk, alpha_atm);
-                spectrum_add(&L, &sun_disk);
+                if (cfg.render_moon) {
+                    float cos_theta_moon = vec3_dot(dir, moon_dir);
+                    if (cos_theta_moon > 0.99999f && moon_dir.y > 0) {
+                        Vec3 m_up_vec = {0, 1, 0};
+                        if (fabsf(moon_dir.y) > 0.99f) m_up_vec = (Vec3){0, 0, 1};
+                        Vec3 m_right = vec3_normalize(vec3_cross(m_up_vec, moon_dir));
+                        Vec3 m_actual_up = vec3_cross(moon_dir, m_right);
+                        float dx = vec3_dot(dir, m_right);
+                        float dy = vec3_dot(dir, m_actual_up);
+                        float dist = sqrtf(dx*dx + dy*dy) / 0.0045f;
+                        if (dist <= 1.0f) {
+                            float dz = sqrtf(1.0f - dist*dist);
+                            Vec3 N = vec3_add(vec3_add(vec3_mul(m_right, dx/0.0045f), vec3_mul(m_actual_up, dy/0.0045f)), vec3_mul(moon_dir, -dz));
+                            N = vec3_normalize(N);
+                            float albedo = 0.12f;
+                            
+                            // Fix texture mapping to be local to the moon face
+                            float nx_local = dx / 0.0045f;
+                            float ny_local = dy / 0.0045f;
+                            // Use local coordinates for UV (Center face is 0,0,1 local)
+                            if (moon_tex) albedo = image_sample_bilinear(moon_tex, (atan2f(nx_local, dz) + PI) / TWO_PI, acosf(ny_local) / PI) * 0.2f;
+                            
+                            float ndotl = vec3_dot(N, sun_dir);
+                            if (ndotl < 0) ndotl = 0;
+                            Spectrum moon_disk = sun_intensity;
+                            // Add a small amount of earthshine (0.005) to the shadow side
+                            spectrum_mul(&moon_disk, albedo * (ndotl + 0.005f) * alpha_atm);
+                            spectrum_add(&L, &moon_disk);
+                        }
+                    }
+                }
+
+                // Render Sun Disk
+                float cos_theta_sun = vec3_dot(dir, sun_dir);
+                if (cos_theta_sun > 0.99999f && sun_dir.y > -0.02f) {
+                    Spectrum sun_disk = sun_intensity;
+                    spectrum_mul(&sun_disk, alpha_atm);
+                    spectrum_add(&L, &sun_disk);
+                }
+                hdr->pixels[y * cfg.width + x] = spectrum_to_xyzv(&L);
             }
-            hdr->pixels[y * cfg.width + x] = spectrum_to_xyzv(&L);
+            if (y % 50 == 0) printf("Row %d\n", y);
         }
-        if (y % 50 == 0) printf("Row %d\n", y);
+    }
+    
+    if (use_gpu) {
+#ifdef CUDA_ENABLED
+        cuda_cleanup();
+#endif
     }
     
     if (num_stars > 0) {

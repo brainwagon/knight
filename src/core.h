@@ -13,6 +13,12 @@
 #define DEG2RAD (PI / 180.0f)
 #define RAD2DEG (180.0f / PI)
 
+#ifdef __CUDACC__
+#define HD __host__ __device__
+#else
+#define HD
+#endif
+
 // Spectral sampling
 #define SPECTRUM_BANDS 40
 #define LAMBDA_START 380.0f
@@ -36,30 +42,45 @@ typedef struct {
 } RGB;
 
 // Vec3 functions
-static inline Vec3 vec3_add(Vec3 a, Vec3 b) { return (Vec3){a.x + b.x, a.y + b.y, a.z + b.z}; }
-static inline Vec3 vec3_sub(Vec3 a, Vec3 b) { return (Vec3){a.x - b.x, a.y - b.y, a.z - b.z}; }
-static inline Vec3 vec3_mul(Vec3 a, float s) { return (Vec3){a.x * s, a.y * s, a.z * s}; }
-static inline float vec3_dot(Vec3 a, Vec3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-static inline Vec3 vec3_cross(Vec3 a, Vec3 b) {
+static inline HD Vec3 vec3_add(Vec3 a, Vec3 b) { return (Vec3){a.x + b.x, a.y + b.y, a.z + b.z}; }
+static inline HD Vec3 vec3_sub(Vec3 a, Vec3 b) { return (Vec3){a.x - b.x, a.y - b.y, a.z - b.z}; }
+static inline HD Vec3 vec3_mul(Vec3 a, float s) { return (Vec3){a.x * s, a.y * s, a.z * s}; }
+static inline HD float vec3_dot(Vec3 a, Vec3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+static inline HD Vec3 vec3_cross(Vec3 a, Vec3 b) {
     return (Vec3){
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x
     };
 }
-static inline float vec3_length(Vec3 v) { return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z); }
-static inline Vec3 vec3_normalize(Vec3 v) {
+static inline HD float vec3_length(Vec3 v) { return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z); }
+static inline HD Vec3 vec3_normalize(Vec3 v) {
     float len = vec3_length(v);
     if (len > 0.0f) return vec3_mul(v, 1.0f / len);
     return v;
 }
 
 // Spectrum functions
-void spectrum_zero(Spectrum* s);
-void spectrum_set(Spectrum* s, float val);
-void spectrum_add(Spectrum* dest, const Spectrum* src);
-void spectrum_mul(Spectrum* dest, float scalar);
-void spectrum_mul_spec(Spectrum* dest, const Spectrum* src);
+static inline HD void spectrum_zero(Spectrum* s) {
+    // memset is not available on device easily, use loop
+    for (int i = 0; i < SPECTRUM_BANDS; i++) s->s[i] = 0.0f;
+}
+
+static inline HD void spectrum_set(Spectrum* s, float val) {
+    for (int i = 0; i < SPECTRUM_BANDS; i++) s->s[i] = val;
+}
+
+static inline HD void spectrum_add(Spectrum* dest, const Spectrum* src) {
+    for (int i = 0; i < SPECTRUM_BANDS; i++) dest->s[i] += src->s[i];
+}
+
+static inline HD void spectrum_mul(Spectrum* dest, float scalar) {
+    for (int i = 0; i < SPECTRUM_BANDS; i++) dest->s[i] *= scalar;
+}
+
+static inline HD void spectrum_mul_spec(Spectrum* dest, const Spectrum* src) {
+    for (int i = 0; i < SPECTRUM_BANDS; i++) dest->s[i] *= src->s[i];
+}
 
 // Blackbody radiation
 // Returns spectral radiance (W/m^2/sr/nm) normalized to some extent or raw? 
