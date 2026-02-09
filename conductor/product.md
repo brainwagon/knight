@@ -18,7 +18,7 @@ Knight is a physically-based night sky rendering engine written in vanilla C. It
 - **Accurate Celestial Positioning**: High-precision ephemerides for the Sun, Moon, and major planets, integrated with multiple star catalogs (YBSC5 and Tycho-2).
 - **Celestial Body Labeling**: Option to label the Sun, Moon, and major planets with their names in configurable colors for easy identification.
 - **Night-Time Perception**: Simulation of scotopic vision effects, including the Purkinje shift, rod saturation, and stellar bloom.
-- **Physically-Based Star Rendering**: Analytic Point Spread Function (PSF) based on the diffraction limit of the observer's aperture, ensuring resolution-independent brightness and realistic spectral spread.
+- **Physically-Based Star Rendering**: Analytic Point Spread Function (PSF) based on the diffraction limit of the observer's aperture, ensuring resolution-independent brightness and realistic spectral spread. The renderer is fully GPU-accelerated using CUDA for high-performance rendering of millions of stars.
 - **Configurable Star Depth**: Universal magnitude filtering allows users to control the density of rendered stars, supporting deep-sky visualizations with millions of stars from the Tycho-2 catalog.
 - **Constellation Outlines & Labels**: Ability to render accurate IAU constellation boundaries and labels (3-letter abbreviations) based on J2000 coordinate data, with full support for both standard and environment map projections including proper meridian wrap-around.
 - **Flexible Output**: Support for HDR output (PFM) and conversion to standard formats (PNG) for various use cases, including environment mapping.
