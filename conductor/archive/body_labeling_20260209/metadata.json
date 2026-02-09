@@ -1,0 +1,8 @@
+{
+  "track_id": "body_labeling_20260209",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-09T10:00:00Z",
+  "updated_at": "2026-02-09T10:00:00Z",
+  "description": "feature: add an option to enable the labeling of planets/sun/moon. They should be labeled in bright red 8 pixels to the right of their location on screen."
+}
