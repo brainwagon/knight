@@ -7,12 +7,12 @@ This plan outlines the steps to migrate star rendering to the GPU using CUDA, si
 - [x] Task: Update `tests/test_psf.c` to verify the simplified PSF logic on the CPU. [b3e5ed8]
 - [x] Task: Conductor - User Manual Verification 'Phase 1: PSF Simplification & CPU Refactor' (Protocol in workflow.md) [a45ee98]
 
-## Phase 2: CUDA Star Data Management
-- [ ] Task: Add `Star` device buffer management (allocation, copying, and cleanup) to `src/render_cuda.cu`.
-- [ ] Task: Update `src/cuda_host.h` to include declarations for `cuda_upload_stars` and `cuda_render_stars`.
-- [ ] Task: Implement `cuda_upload_stars` in `src/render_cuda.cu` to transfer star data to the GPU.
-- [ ] Task: Write a test in `tests/test_cuda_stars.c` to verify successful star data transfer to the GPU.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: CUDA Star Data Management' (Protocol in workflow.md)
+## Phase 2: CUDA Star Data Management [checkpoint: 56c4395]
+- [x] Task: Add `Star` device buffer management (allocation, copying, and cleanup) to `src/render_cuda.cu`. [d573aa3]
+- [x] Task: Update `src/cuda_host.h` to include declarations for `cuda_upload_stars` and `cuda_render_stars`. [d573aa3]
+- [x] Task: Implement `cuda_upload_stars` in `src/render_cuda.cu` to transfer star data to the GPU. [d573aa3]
+- [x] Task: Write a test in `tests/test_cuda_stars.c` to verify successful star data transfer to the GPU. [d573aa3]
+- [x] Task: Conductor - User Manual Verification 'Phase 2: CUDA Star Data Management' (Protocol in workflow.md) [56c4395]
 
 ## Phase 3: GPU Star Rendering Kernel
 - [ ] Task: Implement `render_stars_kernel` in `src/render_cuda.cu` using the simplified 550nm PSF logic and `atomicAdd` for accumulation into the HDR buffer.
