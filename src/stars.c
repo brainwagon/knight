@@ -175,3 +175,80 @@ void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, flo
         }
     }
 }
+
+int load_stars_tycho(const char* dirpath, float mag_limit, Star** stars) {
+    int max_stars = 100000;
+    *stars = (Star*)malloc(sizeof(Star) * max_stars);
+    if (!*stars) return -1;
+    int count = 0;
+
+    for (int i = 0; i < 20; i++) {
+        char filepath[512];
+        snprintf(filepath, sizeof(filepath), "%s/tyc2.dat.%02d", dirpath, i);
+        FILE* f = fopen(filepath, "r");
+        if (!f) {
+            continue;
+        }
+
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            if (strlen(line) < 130) {
+                continue;
+            }
+
+            char bt_str[7], vt_str[7];
+            memcpy(bt_str, line + 110, 6); bt_str[6] = '\0';
+            memcpy(vt_str, line + 123, 6); vt_str[6] = '\0';
+            
+            // Check for blanks - if the string is all spaces
+            bool bt_blank = (bt_str[0] == ' ' && bt_str[1] == ' ' && bt_str[5] == ' ');
+            bool vt_blank = (vt_str[0] == ' ' && vt_str[1] == ' ' && vt_str[5] == ' ');
+
+            if (vt_blank && bt_blank) {
+                continue;
+            }
+            
+            float bt = bt_blank ? 0.0f : (float)atof(bt_str);
+            float vt = vt_blank ? bt : (float)atof(vt_str);
+            if (bt_blank) bt = vt;
+
+            float vmag = vt - 0.090f * (bt - vt);
+            if (vmag > mag_limit) {
+                continue;
+            }
+
+            float bv = 0.850f * (bt - vt);
+
+            char ra_str[13], dec_str[13];
+            memcpy(ra_str, line + 15, 12); ra_str[12] = '\0';
+            memcpy(dec_str, line + 28, 12); dec_str[12] = '\0';
+            
+            if (ra_str[0] == ' ' && ra_str[6] == ' ' && ra_str[11] == ' ') {
+                continue;
+            }
+
+            float ra_deg = (float)atof(ra_str);
+            float dec_deg = (float)atof(dec_str);
+
+            if (count >= max_stars) {
+                max_stars *= 2;
+                Star* new_stars = (Star*)realloc(*stars, sizeof(Star) * max_stars);
+                if (!new_stars) {
+                    fclose(f);
+                    return count;
+                }
+                *stars = new_stars;
+            }
+
+            Star* s = &(*stars)[count];
+            s->id = count;
+            s->ra = ra_deg * DEG2RAD;
+            s->dec = dec_deg * DEG2RAD;
+            s->vmag = vmag;
+            s->bv = bv;
+            count++;
+        }
+        fclose(f);
+    }
+    return count;
+}

@@ -23,6 +23,9 @@ typedef struct {
 // Caller is responsible for freeing *stars.
 int load_stars(const char* filepath, float mag_limit, Star** stars);
 
+// Load stars from the Tycho-2 catalog (directory containing tyc2.dat.XX files)
+int load_stars_tycho(const char* dirpath, float mag_limit, Star** stars);
+
 typedef struct {
     int width, height;
     float aspect;
