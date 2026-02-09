@@ -138,7 +138,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    ConstellationBoundary constellations = {NULL, 0};
+    ConstellationBoundary constellations = {0};
+    constellations.vertices = NULL;
+    constellations.count = 0;
+    constellations.label_count = 0;
     if (cfg.render_outlines) {
         if (load_constellation_boundaries("data/bound_in_20.txt", &constellations) == 0) {
             printf("Loaded %d constellation boundary vertices.\n", constellations.count);

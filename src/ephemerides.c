@@ -39,7 +39,6 @@ static void get_sun_equatorial(double jd, float* ra, float* dec) {
     double lambda = L + 1.915 * sin(g * DEG2RAD) + 0.020 * sin(2 * g * DEG2RAD); // Ecliptic longitude
     double epsilon = 23.439 - 0.0000004 * n; // Obliquity of ecliptic
     
-    double l_rad = lambda * DEG2RAD;
     double e_rad = epsilon * DEG2RAD;
     
     // Convert to RA/Dec
@@ -77,16 +76,11 @@ static void get_moon_equatorial(double jd, float* ra, float* dec) {
     
     // Moon mean longitude
     double Lp = 218.3164477 + 481267.88123421 * T;
-    // Mean elongation of moon
-    double D = 297.8501921 + 445267.1114034 * T;
-    // Sun mean anomaly
-    double M = 357.5291092 + 35999.0502909 * T;
     // Moon mean anomaly
     double Mp = 134.9633964 + 477198.8675055 * T;
     // Moon argument of latitude
     double F = 93.2720950 + 483202.0175233 * T;
     
-    double l_rad = Lp * DEG2RAD; // Very rough ecliptic longitude
     // Add some major perturbations (Eviction, Variation, Annual Eq)
     // Ignore for this "night rendering" prototype to keep it simple and vanilla C
     // Assume Moon is on ecliptic roughly for now? No, assume inclination 5 deg.
@@ -118,8 +112,6 @@ static void equatorial_to_horizon(float ra, float dec, double lmst, double lat, 
     
     double sin_alt = sin(dec) * sin(lat_rad) + cos(dec) * cos(lat_rad) * cos(ha);
     *alt = asinf(sin_alt);
-    
-    double cos_alt = cos(*alt);
     
     // cos(Az)cos(Alt) = sin(Dec)cos(Lat) - cos(Dec)sin(Lat)cos(HA) -> From North?
     // Let's use standard formula:
