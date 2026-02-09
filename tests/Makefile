@@ -6,6 +6,7 @@ SRC = test_constellation.c ../src/core.c ../src/constellation.c ../src/ephemerid
 OBJ = $(SRC:.c=.o)
 TARGET = test_constellation
 CONFIG_TARGET = test_config
+MAG_FILTER_TARGET = test_mag_filter
 LABEL_CONFIG_TARGET = test_label_config
 LABELS_TARGET = test_labels
 ENV_PROJ_TARGET = test_env_proj
@@ -16,9 +17,10 @@ DIAG_SRC = diagnostic_projection.c ../src/core.c ../src/constellation.c ../src/e
 DIAG_OBJ = $(DIAG_SRC:.c=.o)
 DIAG_TARGET = diagnostic_projection
 
-all: $(TARGET) $(CONFIG_TARGET) $(LABEL_CONFIG_TARGET) $(LABELS_TARGET) $(ENV_PROJ_TARGET) $(MATH_TARGET) $(PSF_TARGET)
+all: $(TARGET) $(CONFIG_TARGET) $(MAG_FILTER_TARGET) $(LABEL_CONFIG_TARGET) $(LABELS_TARGET) $(ENV_PROJ_TARGET) $(MATH_TARGET) $(PSF_TARGET)
 	./$(TARGET)
 	./$(CONFIG_TARGET)
+	./$(MAG_FILTER_TARGET)
 	./$(LABEL_CONFIG_TARGET)
 	./$(LABELS_TARGET)
 	./$(ENV_PROJ_TARGET)
@@ -30,6 +32,9 @@ $(TARGET): $(OBJ)
 
 $(CONFIG_TARGET): test_config.o ../src/config.o
 	$(CC) test_config.o ../src/config.o -o $(CONFIG_TARGET) $(LDFLAGS)
+
+$(MAG_FILTER_TARGET): test_mag_filter.o ../src/stars.o ../src/core.o ../src/image.o ../src/tonemap.o
+	$(CC) test_mag_filter.o ../src/stars.o ../src/core.o ../src/image.o ../src/tonemap.o -o $(MAG_FILTER_TARGET) $(LDFLAGS) -ljpeg
 
 $(LABEL_CONFIG_TARGET): test_label_config.o ../src/config.o ../src/core.o
 	$(CC) test_label_config.o ../src/config.o ../src/core.o -o $(LABEL_CONFIG_TARGET) $(LDFLAGS)

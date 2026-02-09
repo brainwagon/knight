@@ -21,7 +21,7 @@ typedef struct {
 // Load stars from the YBS catalog
 // Returns number of stars loaded, or -1 on error.
 // Caller is responsible for freeing *stars.
-int load_stars(const char* filepath, Star** stars);
+int load_stars(const char* filepath, float mag_limit, Star** stars);
 
 typedef struct {
     int width, height;

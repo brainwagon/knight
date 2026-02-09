@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     if (cfg.render_moon) moon_tex = image_load_jpeg("data/moon_albedo.jpg");
 
     Star* stars = NULL;
-    int num_stars = load_stars("data/ybsc5.dat", &stars);
+    int num_stars = load_stars("data/ybsc5.dat", cfg.star_mag_limit, &stars);
     printf("Loaded %d stars.\n", num_stars);
     
     double jd = get_julian_day(cfg.year, cfg.month, cfg.day, cfg.hour);

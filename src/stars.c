@@ -23,7 +23,7 @@ float bv_to_temp(float bv) {
     return 4600.0f * (term1 + term2);
 }
 
-int load_stars(const char* filepath, Star** stars) {
+int load_stars(const char* filepath, float mag_limit, Star** stars) {
     FILE* f = fopen(filepath, "r");
     if (!f) {
         perror("Error opening star catalog");
@@ -32,6 +32,7 @@ int load_stars(const char* filepath, Star** stars) {
 
     int max_stars = 10000;
     *stars = (Star*)malloc(sizeof(Star) * max_stars);
+    if (!*stars) return 0;
     int count = 0;
     
     char line[512];
@@ -41,6 +42,8 @@ int load_stars(const char* filepath, Star** stars) {
         char vmag_str[6];
         memcpy(vmag_str, line + 102, 5); vmag_str[5] = '\0';
         float vmag = (float)atof(vmag_str);
+
+        if (vmag > mag_limit) continue;
         
         char ra_h_str[3], ra_m_str[3], ra_s_str[5];
         memcpy(ra_h_str, line + 75, 2); ra_h_str[2] = '\0';
@@ -76,7 +79,6 @@ int load_stars(const char* filepath, Star** stars) {
         count++;
         if (count >= max_stars) break;
     }
-    
     fclose(f);
     return count;
 }
