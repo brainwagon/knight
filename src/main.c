@@ -399,12 +399,6 @@ int main(int argc, char** argv) {
         }
     }
     
-    if (use_gpu) {
-#ifdef CUDA_ENABLED
-        cuda_cleanup();
-#endif
-    }
-    
     if (num_stars > 0) {
         printf("Rendering Stars...\n");
         star_equ_to_horizon(jd, cfg.lat, cfg.lon, stars, num_stars);
@@ -420,7 +414,18 @@ int main(int argc, char** argv) {
         rcam.right = cam_right;
         rcam.env_map = cfg.env_map;
 
-        render_stars(stars, num_stars, &rcam, cfg.aperture, hdr);
+        if (use_gpu) {
+#ifdef CUDA_ENABLED
+            if (cuda_upload_stars(stars, num_stars)) {
+                cuda_render_stars(cfg.width, cfg.height, &rcam, cfg.aperture, hdr->pixels);
+            } else {
+                printf("Warning: GPU star upload failed. Falling back to CPU for stars.\n");
+                render_stars(stars, num_stars, &rcam, cfg.aperture, hdr);
+            }
+#endif
+        } else {
+            render_stars(stars, num_stars, &rcam, cfg.aperture, hdr);
+        }
     }
 
     printf("Rendering Planets...\n");
@@ -543,5 +548,8 @@ int main(int argc, char** argv) {
     
     image_hdr_free(hdr); image_rgb_free(output); image_free(moon_tex); free(stars);
     free_constellation_boundaries(&constellations);
+#ifdef CUDA_ENABLED
+    if (use_gpu) cuda_cleanup();
+#endif
     return 0;
 }
