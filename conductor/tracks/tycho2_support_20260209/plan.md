@@ -11,12 +11,12 @@ This plan covers the integration of the Tycho-2 star catalog into the Knight ren
 - [x] Task: Implement changes in `config.c` to pass the tests. [61a15b9]
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Configuration and CLI Updates' (Protocol in workflow.md) [895e39d]
 
-## Phase 2: Magnitude Filtering Refactor
-- [ ] Task: Update `load_stars` signature in `src/stars.h` to accept `float mag_limit`.
-- [ ] Task: Update `load_stars` implementation in `src/stars.c` to filter stars based on `mag_limit` during parsing.
-- [ ] Task: Update `main.c` to pass `cfg.star_mag_limit` to `load_stars`.
-- [ ] Task: Write a test in a new file `tests/test_mag_filter.c` that verifies only stars brighter than the limit are loaded from a sample YBSC5 file.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Magnitude Filtering Refactor' (Protocol in workflow.md)
+## Phase 2: Magnitude Filtering Refactor [checkpoint: d031d5d]
+- [x] Task: Update `load_stars` signature in `src/stars.h` to accept `float mag_limit`. [3ddd305]
+- [x] Task: Update `load_stars` implementation in `src/stars.c` to filter stars based on `mag_limit` during parsing. [3ddd305]
+- [x] Task: Update `main.c` to pass `cfg.star_mag_limit` to `load_stars`. [3ddd305]
+- [x] Task: Write a test in a new file `tests/test_mag_filter.c` that verifies only stars brighter than the limit are loaded from a sample YBSC5 file. [3ddd305]
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Magnitude Filtering Refactor' (Protocol in workflow.md) [d031d5d]
 
 ## Phase 3: Tycho-2 Parser Implementation
 - [ ] Task: Declare `load_stars_tycho(const char* dirpath, float mag_limit, Star** stars)` in `src/stars.h`.
