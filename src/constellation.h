@@ -50,11 +50,19 @@ void constellation_equ_to_horizon(double jd, double lat, double lon, Constellati
 // Project a single vertex to screen coordinates. Returns true if in front of camera.
 bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, int width, int height, float* px, float* py);
 
+// Project a vertex using cylindrical environment mapping.
+void project_vertex_env(Vec3 v_dir, int width, int height, float* px, float* py);
+
+// Draw a line that might be subdivided and wrap around in environment map mode
+void draw_line_subdivided(ImageRGB* img, Vec3 p0, Vec3 p1, bool env_map, 
+                          Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, 
+                          float tan_half_fov, float aspect, RGB color);
+
 // Draw constellation outlines to the final image buffer (post-tonemapping)
-void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color);
+void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, bool env_map, RGB color);
 
 // Draw constellation labels at their centroids
-void draw_constellation_labels(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color);
+void draw_constellation_labels(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, bool env_map, RGB color);
 
 // Draw a single 8x8 character
 void draw_char(ImageRGB* img, int x, int y, char c, float r, float g, float b);

@@ -6,6 +6,25 @@
 #include <string.h>
 #include <math.h>
 
+static void draw_line_rgb(ImageRGB* img, int x0, int y0, int x1, int y1, float r, float g, float b) {
+    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy, e2;
+
+    while (1) {
+        if (x0 >= 0 && x0 < img->width && y0 >= 0 && y0 < img->height) {
+            int idx = y0 * img->width + x0;
+            img->pixels[idx].r = r;
+            img->pixels[idx].g = g;
+            img->pixels[idx].b = b;
+        }
+        if (x0 == x1 && y0 == y1) break;
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
 int load_constellation_boundaries(const char* filepath, ConstellationBoundary* boundary) {
     FILE* f = fopen(filepath, "r");
     if (!f) return -1;
@@ -136,26 +155,73 @@ bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float
     return true;
 }
 
-static void draw_line_rgb(ImageRGB* img, int x0, int y0, int x1, int y1, float r, float g, float b) {
-    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy, e2;
+void project_vertex_env(Vec3 v_dir, int width, int height, float* px, float* py) {
+    float az = atan2f(v_dir.x, v_dir.z) * RAD2DEG;
+    if (az < 0) az += 360.0f;
+    float alt = asinf(v_dir.y) * RAD2DEG;
+    
+    *px = (az / 360.0f) * width;
+    *py = (90.0f - alt) / 180.0f * height;
+}
 
-    while (1) {
-        if (x0 >= 0 && x0 < img->width && y0 >= 0 && y0 < img->height) {
-            int idx = y0 * img->width + x0;
-            img->pixels[idx].r = r;
-            img->pixels[idx].g = g;
-            img->pixels[idx].b = b;
+static void draw_line_env_wrapped(ImageRGB* img, float x0, float y0, float x1, float y1, RGB color) {
+    int w = img->width;
+    if (fabsf(x1 - x0) > w * 0.5f) {
+        if (x1 > x0) {
+            float x1_virtual = x1 - w;
+            float t = (0.0f - x0) / (x1_virtual - x0);
+            float y_edge = y0 + t * (y1 - y0);
+            draw_line_rgb(img, (int)roundf(x0), (int)roundf(y0), 0, (int)roundf(y_edge), color.r, color.g, color.b);
+            draw_line_rgb(img, w - 1, (int)roundf(y_edge), (int)roundf(x1), (int)roundf(y1), color.r, color.g, color.b);
+        } else {
+            float x1_virtual = x1 + w;
+            float t = ((float)w - x0) / (x1_virtual - x0);
+            float y_edge = y0 + t * (y1 - y0);
+            draw_line_rgb(img, (int)roundf(x0), (int)roundf(y0), w - 1, (int)roundf(y_edge), color.r, color.g, color.b);
+            draw_line_rgb(img, 0, (int)roundf(y_edge), (int)roundf(x1), (int)roundf(y1), color.r, color.g, color.b);
         }
-        if (x0 == x1 && y0 == y1) break;
-        e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x0 += sx; }
-        if (e2 <= dx) { err += dx; y0 += sy; }
+    } else {
+        draw_line_rgb(img, (int)roundf(x0), (int)roundf(y0), (int)roundf(x1), (int)roundf(y1), color.r, color.g, color.b);
     }
 }
 
-void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color) {
+static void subdivide_and_draw_env(ImageRGB* img, Vec3 p0, Vec3 p1, float max_cos, RGB color) {
+    float cos_theta = vec3_dot(p0, p1);
+    if (cos_theta < max_cos) {
+        Vec3 mid = vec3_add(p0, p1);
+        float len = vec3_length(mid);
+        if (len < 1e-6f) {
+            // Opposite vectors. Pick a midpoint by using a perpendicular vector.
+            Vec3 perp = (fabsf(p0.x) < 0.9f) ? (Vec3){1, 0, 0} : (Vec3){0, 1, 0};
+            mid = vec3_cross(p0, perp);
+        }
+        mid = vec3_normalize(mid);
+        subdivide_and_draw_env(img, p0, mid, max_cos, color);
+        subdivide_and_draw_env(img, mid, p1, max_cos, color);
+    } else {
+        float x0, y0, x1, y1;
+        project_vertex_env(p0, img->width, img->height, &x0, &y0);
+        project_vertex_env(p1, img->width, img->height, &x1, &y1);
+        draw_line_env_wrapped(img, x0, y0, x1, y1, color);
+    }
+}
+
+void draw_line_subdivided(ImageRGB* img, Vec3 p0, Vec3 p1, bool env_map, 
+                          Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, 
+                          float tan_half_fov, float aspect, RGB color) {
+    if (env_map) {
+        // cos(2 degrees) = 0.99939
+        subdivide_and_draw_env(img, p0, p1, 0.99939f, color);
+    } else {
+        float x0, y0, x1, y1;
+        if (project_vertex(p0, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x0, &y0) &&
+            project_vertex(p1, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x1, &y1)) {
+            draw_line_rgb(img, (int)roundf(x0), (int)roundf(y0), (int)roundf(x1), (int)roundf(y1), color.r, color.g, color.b);
+        }
+    }
+}
+
+void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, bool env_map, RGB color) {
     for (int i = 0; i < boundary->count - 1; i++) {
         ConstellationVertex* v0 = &boundary->vertices[i];
         ConstellationVertex* v1 = &boundary->vertices[i + 1];
@@ -177,23 +243,26 @@ void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary,
             else p1 = intersect;
         }
 
-        float x0, y0, x1, y1;
-        if (project_vertex(p0, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x0, &y0) &&
-            project_vertex(p1, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x1, &y1)) {
-            
-            draw_line_rgb(img, (int)roundf(x0), (int)roundf(y0), (int)roundf(x1), (int)roundf(y1), color.r, color.g, color.b);
-        }
+        draw_line_subdivided(img, p0, p1, env_map, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, color);
     }
 }
 
-void draw_constellation_labels(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color) {
+void draw_constellation_labels(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, bool env_map, RGB color) {
     for (int i = 0; i < boundary->label_count; i++) {
         ConstellationLabel* l = &boundary->labels[i];
         if (l->alt < 0) continue;
 
         float px, py;
-        if (project_vertex(l->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &px, &py)) {
-            if (px >= 0 && px < img->width && py >= 0 && py < img->height) {
+        bool visible = false;
+        if (env_map) {
+            project_vertex_env(l->direction, img->width, img->height, &px, &py);
+            visible = true;
+        } else {
+            visible = project_vertex(l->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &px, &py);
+        }
+
+        if (visible) {
+            if (py >= 0 && py < img->height) {
                 draw_label_centered(img, (int)roundf(px), (int)roundf(py), l->abbr, color.r, color.g, color.b);
             }
         }
@@ -210,7 +279,11 @@ void draw_char(ImageRGB* img, int x, int y, char c, float r, float g, float b) {
             if (glyph[row] & (0x80 >> col)) {
                 int px = x + col;
                 int py = y + row;
-                if (px >= 0 && px < img->width && py >= 0 && py < img->height) {
+                
+                // Horizontal wrap
+                px = (px % img->width + img->width) % img->width;
+                
+                if (py >= 0 && py < img->height) {
                     int idx = py * img->width + px;
                     img->pixels[idx].r = r;
                     img->pixels[idx].g = g;

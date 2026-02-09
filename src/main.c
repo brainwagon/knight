@@ -504,10 +504,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (cfg.render_outlines && constellations.count > 0 && !cfg.env_map) {
+    if (cfg.render_outlines && constellations.count > 0) {
         printf("Drawing Constellation Outlines and Labels...\n");
-        draw_constellation_outlines(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.outline_color);
-        draw_constellation_labels(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.outline_color);
+        draw_constellation_outlines(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.env_map, cfg.outline_color);
+        draw_constellation_labels(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.env_map, cfg.outline_color);
     }
 
     write_pfm(cfg.output_filename, cfg.width, cfg.height, output->pixels);
