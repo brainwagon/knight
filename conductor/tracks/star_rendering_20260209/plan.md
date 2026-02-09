@@ -10,7 +10,7 @@
     - [x] Sub-task: TDD - Write unit tests to verify integration over infinite bounds equals 1.0 (normalized), symmetry, and correct scaling with sigma.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Math Foundation & Configuration' (Protocol in workflow.md)
 
-## Phase 2: Spectral PSF Rendering Logic
+## Phase 2: Spectral PSF Rendering Logic [checkpoint: 7480a0c]
 - [x] Task: Refactor Star Rendering to use PSF. 1e34523
     - [x] Sub-task: Update `stars.c` to use the new physics-based approach.
     - [x] Sub-task: Calculate angular size per spectral band: `theta = 1.22 * lambda / aperture`.
