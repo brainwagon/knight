@@ -7,111 +7,10 @@
 #include "zodiacal.h"
 #include "constellation.h"
 #include "cuda_host.h"
+#include "config.h"
 #include <getopt.h>
 #include <time.h>
 #include <strings.h>
-
-void print_help(const char* progname) {
-    printf("Usage: %s [options]\n", progname);
-    printf("Options:\n");
-    printf("  -l, --lat <deg>      Observer latitude (default: 45.0)\n");
-    printf("  -L, --lon <deg>      Observer longitude (default: 0.0)\n");
-    printf("  -d, --date <Y-M-D>   Simulation date (default: today)\n");
-    printf("  -t, --time <hour>    UTC hour (default: now)\n");
-    printf("  -a, --alt <deg>      Viewer altitude (default: 10.0)\n");
-    printf("  -z, --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\n");
-    printf("  -f, --fov <deg>      Field of view (default: 60.0)\n");
-    printf("  -w, --width <px>     Image width (default: 640)\n");
-    printf("  -h, --height <px>    Image height (default: 480)\n");
-    printf("  -o, --output <file>  Output filename (default: output.pfm)\n");
-    printf("  -c, --convert        Convert PFM to PNG using ImageMagick\n");
-    printf("  -T, --track <body|planet> Track celestial body (sun, moon, mercury, venus, mars, jupiter, saturn)\n");
-    printf("  -e, --exposure <val> Exposure boost in f-stops (default: 0.0)\n");
-    printf("  -E, --env            Generate cylindrical environment map\n");
-    printf("  -n, --no-moon        Disable moon rendering\n");
-    printf("  -O, --outline        Render constellation outlines\n");
-    printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\n");
-    printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\n");
-    printf("      --help           Show this help\n");
-}
-
-static struct option long_options[] = {
-    {"lat",     required_argument, 0, 'l'},
-    {"lon",     required_argument, 0, 'L'},
-    {"date",    required_argument, 0, 'd'},
-    {"time",    required_argument, 0, 't'},
-    {"alt",     required_argument, 0, 'a'},
-    {"az",      required_argument, 0, 'z'},
-    {"fov",     required_argument, 0, 'f'},
-    {"width",   required_argument, 0, 'w'},
-    {"height",  required_argument, 0, 'h'},
-    {"output",  required_argument, 0, 'o'},
-    {"convert", no_argument,       0, 'c'},
-    {"track",   required_argument, 0, 'T'},
-    {"exposure",required_argument, 0, 'e'},
-    {"env",     no_argument,       0, 'E'},
-    {"no-moon", no_argument,       0, 'n'},
-    {"outline", no_argument,       0, 'O'},
-    {"turbidity", required_argument, 0, 'u'},
-    {"mode",    required_argument, 0, 'M'},
-    {"help",    no_argument,       0, '?'},
-    {0, 0, 0, 0}
-};
-
-typedef struct {
-    bool render_moon;
-    bool render_outlines;
-    bool convert_to_png;
-    char* track_body;
-    int year, month, day;
-    double hour;
-    double lat, lon;
-    float cam_alt, cam_az, fov;
-    int width, height;
-    float exposure_boost;
-    char* output_filename;
-    bool custom_cam;
-    bool env_map;
-    float turbidity;
-    char* mode;
-} Config;
-
-void parse_args(int argc, char** argv, Config* cfg) {
-    int opt;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:M:", long_options, NULL)) != -1) {
-        switch (opt) {
-            case 'l': cfg->lat = atof(optarg); break;
-            case 'L': cfg->lon = atof(optarg); break;
-            case 'd': sscanf(optarg, "%d-%d-%d", &cfg->year, &cfg->month, &cfg->day); break;
-            case 't': 
-                if (strchr(optarg, ':')) {
-                    int h = 0, m = 0;
-                    float s = 0;
-                    sscanf(optarg, "%d:%d:%f", &h, &m, &s);
-                    cfg->hour = h + m / 60.0 + s / 3600.0;
-                } else {
-                    cfg->hour = atof(optarg); 
-                }
-                break;
-            case 'a': cfg->cam_alt = atof(optarg); cfg->custom_cam = true; break;
-            case 'z': cfg->cam_az = atof(optarg); cfg->custom_cam = true; break;
-            case 'f': cfg->fov = atof(optarg); break;
-            case 'w': cfg->width = atoi(optarg); break;
-            case 'h': cfg->height = atoi(optarg); break;
-            case 'o': cfg->output_filename = optarg; break;
-            case 'c': cfg->convert_to_png = true; break;
-            case 'T': cfg->track_body = optarg; cfg->custom_cam = true; break;
-            case 'e': cfg->exposure_boost = atof(optarg); break;
-            case 'E': cfg->env_map = true; break;
-            case 'n': cfg->render_moon = false; break;
-            case 'O': cfg->render_outlines = true; break;
-            case 'u': cfg->turbidity = atof(optarg); break;
-            case 'M': cfg->mode = optarg; break;
-            case '?': print_help(argv[0]); exit(0);
-            default: break;
-        }
-    }
-}
 
 int main(int argc, char** argv) {
     Config cfg;
@@ -119,6 +18,7 @@ int main(int argc, char** argv) {
     cfg.render_outlines = false;
     cfg.convert_to_png = false;
     cfg.track_body = NULL;
+    cfg.aperture = 6.0f;
     
     // Default to current UTC time
     time_t now = time(NULL);
@@ -170,6 +70,7 @@ int main(int argc, char** argv) {
     printf("Output file: %s\n", cfg.output_filename);
     printf("Exposure boost: %.1f stops\n", cfg.exposure_boost);
     printf("Atmospheric Turbidity: %.2f\n", cfg.turbidity);
+    printf("Aperture: %.1f mm\n", cfg.aperture);
     printf("Mode: %s\n", cfg.mode);
     
     Atmosphere atm;
@@ -558,10 +459,8 @@ int main(int argc, char** argv) {
 
     if (cfg.render_outlines && constellations.count > 0 && !cfg.env_map) {
         printf("Drawing Constellation Outlines and Labels...\n");
-        // Convert ImageRGB to Image for the drawing function (they are compatible in data layout)
-        Image img = {cfg.width, cfg.height, 3, (unsigned char*)output->pixels};
-        draw_constellation_outlines(&img, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
-        draw_constellation_labels(&img, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
+        draw_constellation_outlines(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
+        draw_constellation_labels(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
     }
 
     write_pfm(cfg.output_filename, cfg.width, cfg.height, output->pixels);
