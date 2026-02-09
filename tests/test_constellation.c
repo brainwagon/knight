@@ -27,23 +27,53 @@ void test_load_boundaries() {
 
     
 
-    // Check first vertex (22.9643492 +35.168228 AND)
+    // Count unique constellations
 
-    // 22.9643492 * 15 * DEG2RAD = 6.01202... radians?
+    char list[200][4];
 
-    // Let's just check the values exist and are reasonable.
+    int unique_count = 0;
 
-    assert(boundary.vertices[0].ra > 0);
+    for (int i = 0; i < boundary.count; i++) {
 
-    assert(strcmp(boundary.vertices[0].abbr, "AND") == 0);
+        int found = 0;
+
+        for (int j = 0; j < unique_count; j++) {
+
+            if (strcmp(boundary.vertices[i].abbr, list[j]) == 0) {
+
+                found = 1;
+
+                break;
+
+            }
+
+        }
+
+        if (!found && unique_count < 200) {
+
+            strcpy(list[unique_count], boundary.vertices[i].abbr);
+
+            unique_count++;
+
+        }
+
+    }
 
     
 
-    printf("test_load_boundaries passed: loaded %d vertices\n", boundary.count);
+    // There should be 88 constellations
+
+    printf("test_load_boundaries passed: loaded %d vertices, %d constellations\n", boundary.count, unique_count);
+
+    assert(unique_count == 88);
+
+    
 
     free_constellation_boundaries(&boundary);
 
 }
+
+
 
 
 
