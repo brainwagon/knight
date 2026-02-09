@@ -5,9 +5,9 @@
     - [x] Sub-task: Update `config` struct in `main.c` to hold aperture size (default 6.0mm).
     - [x] Sub-task: Parse `-a` / `--aperture` flag.
     - [x] Sub-task: TDD - Write test to verify argument parsing.
-- [ ] Task: Implement analytic Gaussian integration function.
-    - [ ] Sub-task: Create a math utility function `integrate_gaussian_2d` in `core.c` (or similar) that calculates the integral of a Gaussian over a rectangular pixel area.
-    - [ ] Sub-task: TDD - Write unit tests to verify integration over infinite bounds equals 1.0 (normalized), symmetry, and correct scaling with sigma.
+- [x] Task: Implement analytic Gaussian integration function. 5e623c2
+    - [x] Sub-task: Create a math utility function `integrate_gaussian_2d` in `core.c` (or similar) that calculates the integral of a Gaussian over a rectangular pixel area.
+    - [x] Sub-task: TDD - Write unit tests to verify integration over infinite bounds equals 1.0 (normalized), symmetry, and correct scaling with sigma.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Math Foundation & Configuration' (Protocol in workflow.md)
 
 ## Phase 2: Spectral PSF Rendering Logic
