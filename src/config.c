@@ -5,28 +5,28 @@
 #include <string.h>
 
 void print_help(const char* progname) {
-    printf("Usage: %s [options]\\n", progname);
-    printf("Options:\\n");
-    printf("  -l, --lat <deg>      Observer latitude (default: 45.0)\\n");
-    printf("  -L, --lon <deg>      Observer longitude (default: 0.0)\\n");
-    printf("  -d, --date <Y-M-D>   Simulation date (default: today)\\n");
-    printf("  -t, --time <hour>    UTC hour (default: now)\\n");
-    printf("  -a, --alt <deg>      Viewer altitude (default: 10.0)\\n");
-    printf("  -z, --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\\n");
-    printf("  -f, --fov <deg>      Field of view (default: 60.0)\\n");
-    printf("  -w, --width <px>     Image width (default: 640)\\n");
-    printf("  -h, --height <px>    Image height (default: 480)\\n");
-    printf("  -o, --output <file>  Output filename (default: output.pfm)\\n");
-    printf("  -c, --convert        Convert PFM to PNG using ImageMagick\\n");
-    printf("  -T, --track <body|planet> Track celestial body (sun, moon, mercury, venus, mars, jupiter, saturn)\\n");
-    printf("  -e, --exposure <val> Exposure boost in f-stops (default: 0.0)\\n");
-    printf("  -E, --env            Generate cylindrical environment map\\n");
-    printf("  -n, --no-moon        Disable moon rendering\\n");
-    printf("  -O, --outline        Render constellation outlines\\n");
-    printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\\n");
-    printf("  -A, --aperture <mm>  Observer aperture diameter in mm (default: 6.0)\\n");
-    printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\\n");
-    printf("      --help           Show this help\\n");
+    printf("Usage: %s [options]\n", progname);
+    printf("Options:\n");
+    printf("  -l, --lat <deg>      Observer latitude (default: 45.0)\n");
+    printf("  -L, --lon <deg>      Observer longitude (default: 0.0)\n");
+    printf("  -d, --date <Y-M-D>   Simulation date (default: today)\n");
+    printf("  -t, --time <hour>    UTC hour (default: now)\n");
+    printf("  -a, --alt <deg>      Viewer altitude (default: 10.0)\n");
+    printf("  -z, --az <deg>       Viewer azimuth (0=N, 90=E, 180=S, 270=W, default: 270.0)\n");
+    printf("  -f, --fov <deg>      Field of view (default: 60.0)\n");
+    printf("  -w, --width <px>     Image width (default: 640)\n");
+    printf("  -h, --height <px>    Image height (default: 480)\n");
+    printf("  -o, --output <file>  Output filename (default: output.pfm)\n");
+    printf("  -c, --convert        Convert PFM to PNG using ImageMagick\n");
+    printf("  -T, --track <body|planet> Track celestial body (sun, moon, mercury, venus, mars, jupiter, saturn)\n");
+    printf("  -e, --exposure <val> Exposure boost in f-stops (default: 0.0)\n");
+    printf("  -E, --env            Generate cylindrical environment map\n");
+    printf("  -n, --no-moon        Disable moon rendering\n");
+    printf("  -O, --outline        Render constellation outlines\n");
+    printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\n");
+    printf("  -A, --aperture <mm>  Observer aperture diameter in mm (default: 6.0)\n");
+    printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\n");
+    printf("      --help           Show this help\n");
 }
 
 static struct option long_options[] = {

@@ -12,9 +12,9 @@ void test_parse_aperture() {
     
     parse_args(argc, argv, &cfg);
     
-    printf("Expected aperture 10.0, got %.1f\\n", cfg.aperture);
+    printf("Expected aperture 10.0, got %.1f\n", cfg.aperture);
     assert(cfg.aperture == 10.0f);
-    printf("test_parse_aperture passed\\n");
+    printf("test_parse_aperture passed\n");
 }
 
 void test_parse_aperture_short() {
@@ -26,14 +26,14 @@ void test_parse_aperture_short() {
     
     parse_args(argc, argv, &cfg);
     
-    printf("Expected aperture 25.0, got %.1f\\n", cfg.aperture);
+    printf("Expected aperture 25.0, got %.1f\n", cfg.aperture);
     assert(cfg.aperture == 25.0f);
-    printf("test_parse_aperture_short passed\\n");
+    printf("test_parse_aperture_short passed\n");
 }
 
 int main() {
     test_parse_aperture();
     test_parse_aperture_short();
-    printf("All config tests passed!\\n");
+    printf("All config tests passed!\n");
     return 0;
 }
