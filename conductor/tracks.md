@@ -6,3 +6,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: bugfix: star brightnesses appear to vary considerably depending on output resolution. Implement spectral PSF for consistent rendering.**
 *Link: [./tracks/star_rendering_20260209/](./tracks/star_rendering_20260209/)*
+
+---
+
+- [x] **Track: Support for the Tycho-2 star catalog and universal magnitude filtering.**
+*Link: [./tracks/tycho2_support_20260209/](./tycho2_support_20260209/)*
