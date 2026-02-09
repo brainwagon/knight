@@ -19,6 +19,9 @@ int main(int argc, char** argv) {
     cfg.convert_to_png = false;
     cfg.track_body = NULL;
     cfg.aperture = 6.0f;
+    cfg.use_tycho = false;
+    cfg.tycho_dir = "tycho";
+    cfg.star_mag_limit = 6.0f;
     
     // Default to current UTC time
     time_t now = time(NULL);

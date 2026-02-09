@@ -26,6 +26,9 @@ typedef struct {
     RGB outline_color;
     bool label_bodies;
     RGB label_color;
+    bool use_tycho;
+    char* tycho_dir;
+    float star_mag_limit;
 } Config;
 
 void print_help(const char* progname);

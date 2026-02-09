@@ -30,6 +30,9 @@ void print_help(const char* progname) {
     printf("  -A, --aperture <mm>  Observer aperture diameter in mm (default: 6.0)\n");
     printf("  -B, --bloom          Enable bloom/glare effect\n");
     printf("  -s, --bloom-size <deg> Bloom/glare size in degrees (default: 0.02)\n");
+    printf("      --tycho          Use Tycho-2 star catalog instead of YBSC5\n");
+    printf("      --tycho-dir <path> Path to Tycho-2 data directory (default: ./tycho)\n");
+    printf("  -m, --mag-limit <mag> Visual magnitude limit for stars (default: 6.0)\n");
     printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\n");
     printf("      --help           Show this help\n");
 }
@@ -59,6 +62,9 @@ static struct option long_options[] = {
     {"bloom",   no_argument,       0, 'B'},
     {"bloom-size", required_argument, 0, 's'},
     {"mode",    required_argument, 0, 'M'},
+    {"tycho",   no_argument,       0, 'Y'},
+    {"tycho-dir", required_argument, 0, 'D'},
+    {"mag-limit", required_argument, 0, 'm'},
     {"help",    no_argument,       0, '?'},
     {0, 0, 0, 0}
 };
@@ -66,7 +72,7 @@ static struct option long_options[] = {
 void parse_args(int argc, char** argv, Config* cfg) {
     int opt;
     optind = 1;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:A:Bs:C:jK:M:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:A:Bs:C:jK:M:YD:m:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': cfg->lat = atof(optarg); break;
             case 'L': cfg->lon = atof(optarg); break;
@@ -117,6 +123,9 @@ void parse_args(int argc, char** argv, Config* cfg) {
             case 'B': cfg->bloom = true; break;
             case 's': cfg->bloom_size = atof(optarg); break;
             case 'M': cfg->mode = optarg; break;
+            case 'Y': cfg->use_tycho = true; break;
+            case 'D': cfg->tycho_dir = optarg; break;
+            case 'm': cfg->star_mag_limit = atof(optarg); break;
             case '?': print_help(argv[0]); exit(0);
             default: break;
         }
