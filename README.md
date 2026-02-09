@@ -21,6 +21,10 @@ An implementation of "A Physically-Based Night Sky Model" in vanilla C.
 
 Ensure you have `libjpeg` development headers installed (e.g., `libjpeg-dev` on Ubuntu).
 
+### Prerequisites (for CUDA mode)
+- NVIDIA GPU with Compute Capability 7.5 or higher (Turing architecture or later).
+- CUDA Toolkit installed and available in the system PATH.
+
 ```bash
 make
 ```

@@ -47,10 +47,10 @@ $(TYCHO_LOAD_TARGET): test_tycho_load.o ../src/stars.o ../src/core.o ../src/imag
 	$(CC) test_tycho_load.o ../src/stars.o ../src/core.o ../src/image.o ../src/tonemap.o -o $(TYCHO_LOAD_TARGET) $(LDFLAGS) -ljpeg
 
 $(CUDA_STARS_TARGET): test_cuda_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o
-	/usr/local/cuda/bin/nvcc $(CUDA_FLAGS) test_cuda_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o -o $(CUDA_STARS_TARGET) -lm -ljpeg
+	/usr/local/cuda/bin/nvcc $(CUDA_FLAGS) -arch=sm_75 test_cuda_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o -o $(CUDA_STARS_TARGET) -lm -ljpeg
 
 $(GPU_STARS_TARGET): test_gpu_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o
-	/usr/local/cuda/bin/nvcc $(CUDA_FLAGS) test_gpu_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o -o $(GPU_STARS_TARGET) -lm -ljpeg
+	/usr/local/cuda/bin/nvcc $(CUDA_FLAGS) -arch=sm_75 test_gpu_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o -o $(GPU_STARS_TARGET) -lm -ljpeg
 
 $(LABEL_CONFIG_TARGET): test_label_config.o ../src/config.o ../src/core.o
 	$(CC) test_label_config.o ../src/config.o ../src/core.o -o $(LABEL_CONFIG_TARGET) $(LDFLAGS)

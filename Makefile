@@ -43,13 +43,14 @@ TARGET = knight
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(LINK) $(OBJ) -o $(TARGET) $(LDFLAGS)
+	$(LINK) -arch=sm_75 $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Target modern CUDA architecture (sm_75 = Turing) to avoid deprecation warnings.
 %.o: %.cu
-	$(NVCC) -O3 -Isrc -c $< -o $@
+	$(NVCC) -O3 -arch=sm_75 -Isrc -c $< -o $@
 
 clean:
 	rm -f $(OBJ) $(TARGET)

@@ -84,7 +84,7 @@ void update_moon_texture(unsigned char* data, int w, int h) {
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(8, 0, 0, 0, cudaChannelFormatKindUnsigned);
     cudaMallocArray(&moon_tex_array, &channelDesc, w, h);
     
-    cudaMemcpyToArray(moon_tex_array, 0, 0, data, w * h * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy2DToArray(moon_tex_array, 0, 0, data, w * sizeof(unsigned char), w * sizeof(unsigned char), h, cudaMemcpyHostToDevice);
     
     struct cudaResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
