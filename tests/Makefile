@@ -15,12 +15,13 @@ ENV_PROJ_TARGET = test_env_proj
 MATH_TARGET = test_math
 PSF_TARGET = test_psf
 CUDA_STARS_TARGET = test_cuda_stars
+GPU_STARS_TARGET = test_gpu_stars
 
 DIAG_SRC = diagnostic_projection.c ../src/core.c ../src/constellation.c ../src/ephemerides.c ../src/stars.c
 DIAG_OBJ = $(DIAG_SRC:.c=.o)
 DIAG_TARGET = diagnostic_projection
 
-all: $(TARGET) $(CONFIG_TARGET) $(MAG_FILTER_TARGET) $(TYCHO_LOAD_TARGET) $(LABEL_CONFIG_TARGET) $(LABELS_TARGET) $(ENV_PROJ_TARGET) $(MATH_TARGET) $(PSF_TARGET) $(CUDA_STARS_TARGET)
+all: $(TARGET) $(CONFIG_TARGET) $(MAG_FILTER_TARGET) $(TYCHO_LOAD_TARGET) $(LABEL_CONFIG_TARGET) $(LABELS_TARGET) $(ENV_PROJ_TARGET) $(MATH_TARGET) $(PSF_TARGET) $(CUDA_STARS_TARGET) $(GPU_STARS_TARGET)
 	./$(TARGET)
 	./$(CONFIG_TARGET)
 	./$(MAG_FILTER_TARGET)
@@ -31,6 +32,7 @@ all: $(TARGET) $(CONFIG_TARGET) $(MAG_FILTER_TARGET) $(TYCHO_LOAD_TARGET) $(LABE
 	./$(MATH_TARGET)
 	./$(PSF_TARGET)
 	./$(CUDA_STARS_TARGET)
+	./$(GPU_STARS_TARGET)
 
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
@@ -46,6 +48,9 @@ $(TYCHO_LOAD_TARGET): test_tycho_load.o ../src/stars.o ../src/core.o ../src/imag
 
 $(CUDA_STARS_TARGET): test_cuda_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o
 	/usr/local/cuda/bin/nvcc $(CUDA_FLAGS) test_cuda_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o -o $(CUDA_STARS_TARGET) -lm -ljpeg
+
+$(GPU_STARS_TARGET): test_gpu_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o
+	/usr/local/cuda/bin/nvcc $(CUDA_FLAGS) test_gpu_stars.o ../src/render_cuda.o ../src/core.o ../src/atmosphere.o ../src/zodiacal.o ../src/stars.o ../src/tonemap.o ../src/image.o ../src/ephemerides.o -o $(GPU_STARS_TARGET) -lm -ljpeg
 
 $(LABEL_CONFIG_TARGET): test_label_config.o ../src/config.o ../src/core.o
 	$(CC) test_label_config.o ../src/config.o ../src/core.o -o $(LABEL_CONFIG_TARGET) $(LDFLAGS)

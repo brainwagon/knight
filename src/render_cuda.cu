@@ -327,3 +327,167 @@ extern "C" bool cuda_render_frame(
     cudaMemcpy(out_pixels, d_pixels, size, cudaMemcpyDeviceToHost);
     return true;
 }
+
+__global__ void render_stars_kernel(
+    Star* stars, int num_stars,
+    int width, int height,
+    Vec3 cam_forward, Vec3 cam_right, Vec3 cam_up,
+    float tan_half_fov, float aspect,
+    bool env_map,
+    float sigma_ang,
+    float pinhole_f_px,
+    XYZV* out_pixels
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_stars) return;
+
+    Star s = stars[idx];
+    if (s.direction.y <= 0) return;
+
+    float px, py;
+    if (env_map) {
+        float s_az = atan2f(s.direction.x, s.direction.z) * RAD2DEG;
+        if (s_az < 0) s_az += 360.0f;
+        px = (s_az / 360.0f) * width;
+        py = (90.0f - asinf(s.direction.y) * RAD2DEG) / 180.0f * height;
+    } else {
+        float dz = vec3_dot(s.direction, cam_forward);
+        if (dz <= 0) return;
+        px = (vec3_dot(s.direction, cam_right) / dz / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
+        py = (1.0f - vec3_dot(s.direction, cam_up) / dz / tan_half_fov) * 0.5f * height;
+    }
+
+    if (px < -20 || px >= width + 20 || py < -20 || py >= height + 20) return;
+
+    // Spectrum calculation (simplified blackbody)
+    // We can't easily call host functions, so we reimplement or use device functions.
+    // Assuming bv_to_temp and blackbody_spectrum logic is needed.
+    // For performance, we can approximate or use pre-computed color.
+    // But the requirement says "parity". So we implement it.
+    
+    float term1 = 1.0f / (0.92f * s.bv + 1.7f);
+    float term2 = 1.0f / (0.92f * s.bv + 0.62f);
+    float tempK = 4600.0f * (term1 + term2);
+
+    Spectrum spec;
+    // Blackbody inline
+    double c1 = 1.191e-16; 
+    double c2 = 1.4388e-2;
+    for (int i = 0; i < SPECTRUM_BANDS; i++) {
+        float lambda_nm = LAMBDA_START + i * LAMBDA_STEP;
+        double lambda_m = lambda_nm * 1e-9;
+        double power_term = pow(lambda_m, 5.0);
+        double exp_term = exp(c2 / (lambda_m * tempK)) - 1.0;
+        spec.s[i] = (float)(c1 / (power_term * exp_term));
+    }
+
+    XYZV star_xyzv = dev_spectrum_to_xyzv(&spec); // Uses device constant memory
+    
+    // Normalize flux (CPU logic: flux / xyz_bb.V)
+    // Note: dev_spectrum_to_xyzv includes dLambda scaling, CPU spectrum_to_xyzv does too.
+    float flux = powf(10.0f, -0.4f * s.vmag) * 2.0e-5f;
+    float norm = star_xyzv.V + 1e-20f;
+    float scale = flux / norm;
+    
+    star_xyzv.X *= scale;
+    star_xyzv.Y *= scale;
+    star_xyzv.Z *= scale;
+    star_xyzv.V *= scale;
+
+    float T = expf(-0.1f / (s.direction.y + 0.01f));
+    star_xyzv.X *= T;
+    star_xyzv.Y *= T;
+    star_xyzv.Z *= T;
+    star_xyzv.V *= T;
+
+    float sigma_px;
+    float solid_angle;
+    
+    if (env_map) {
+        sigma_px = sigma_ang * width / 6.283185f;
+        solid_angle = (6.283185f / width) * (3.14159f / height) * cosf(asinf(s.direction.y));
+    } else {
+        sigma_px = sigma_ang * pinhole_f_px;
+        solid_angle = (4.0f * tan_half_fov * tan_half_fov * aspect) / (width * height);
+    }
+
+    if (sigma_px < 0.5f) sigma_px = 0.5f;
+
+    int radius = (int)(sigma_px * 4.0f) + 1;
+    int x_start = (int)px - radius;
+    int x_end = (int)px + radius;
+    int y_start = (int)py - radius;
+    int y_end = (int)py + radius;
+
+    if (x_start < 0) x_start = 0;
+    if (x_end >= width) x_end = width - 1;
+    if (y_start < 0) y_start = 0;
+    if (y_end >= height) y_end = height - 1;
+
+    float rad_factor = 1.0f / (solid_angle + 1e-15f);
+    float inv_sigma_sqrt2 = 1.0f / (sigma_px * sqrtf(2.0f));
+
+    for (int iy = y_start; iy <= y_end; iy++) {
+        float y0 = (float)iy - py;
+        float y1 = (float)iy + 1.0f - py;
+        float weight_y = 0.5f * (erff(y1 * inv_sigma_sqrt2) - erff(y0 * inv_sigma_sqrt2));
+        
+        for (int ix = x_start; ix <= x_end; ix++) {
+            float x0 = (float)ix - px;
+            float x1 = (float)ix + 1.0f - px;
+            float weight_x = 0.5f * (erff(x1 * inv_sigma_sqrt2) - erff(x0 * inv_sigma_sqrt2));
+            
+            float f = weight_x * weight_y * rad_factor;
+            
+            int p_idx = iy * width + ix;
+            atomicAdd(&out_pixels[p_idx].X, star_xyzv.X * f);
+            atomicAdd(&out_pixels[p_idx].Y, star_xyzv.Y * f);
+            atomicAdd(&out_pixels[p_idx].Z, star_xyzv.Z * f);
+            atomicAdd(&out_pixels[p_idx].V, star_xyzv.V * f);
+        }
+    }
+}
+
+extern "C" bool cuda_render_stars(
+    int width, int height,
+    const RenderCamera* cam,
+    float aperture,
+    XYZV* out_pixels
+) {
+    if (d_stars == NULL || d_num_stars == 0) return true;
+    if (d_pixels == NULL) return false; // Should be allocated by render_frame
+
+    // 550nm constants matching CPU
+    float lambda_550nm = 550.0f;
+    float theta_550nm = 1.22f * (lambda_550nm * 1e-9f) / (aperture * 1e-3f);
+    float sigma_ang = theta_550nm * 0.42f;
+
+    float pinhole_f_px = 0;
+    if (!cam->env_map) {
+        pinhole_f_px = height / (2.0f * cam->tan_half_fov);
+    }
+
+    int blockSize = 256;
+    int numBlocks = (d_num_stars + blockSize - 1) / blockSize;
+
+    render_stars_kernel<<<numBlocks, blockSize>>>(
+        d_stars, d_num_stars,
+        width, height,
+        cam->forward, cam->right, cam->up,
+        cam->tan_half_fov, cam->aspect,
+        cam->env_map,
+        sigma_ang,
+        pinhole_f_px,
+        d_pixels
+    );
+
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("CUDA Error (render_stars): %s\n", cudaGetErrorString(err));
+        return false;
+    }
+
+    size_t size = width * height * sizeof(XYZV);
+    cudaMemcpy(out_pixels, d_pixels, size, cudaMemcpyDeviceToHost);
+    return true;
+}
