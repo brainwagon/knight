@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: feature: plotting outlines should be supported in -E (environment mapp mode)**
+- [x] **Track: feature: plotting outlines should be supported in -E (environment mapp mode)**
 *Link: [./tracks/env_constellations_20260209/](./tracks/env_constellations_20260209/)*
