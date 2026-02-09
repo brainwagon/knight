@@ -19,16 +19,16 @@ This plan covers the integration of the Tycho-2 star catalog into the Knight ren
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Magnitude Filtering Refactor' (Protocol in workflow.md) [d031d5d]
 
 ## Phase 3: Tycho-2 Parser Implementation
-- [ ] Task: Declare `load_stars_tycho(const char* dirpath, float mag_limit, Star** stars)` in `src/stars.h`.
-- [ ] Task: Implement `load_stars_tycho` in `src/stars.c` to iterate through `tyc2.dat.00` to `tyc2.dat.19`.
-- [ ] Task: Implement the Tycho-2 line parser using fixed-byte offsets for RA, Dec, BTmag, and VTmag.
-- [ ] Task: Implement the magnitude and color index transformations in the parser.
-- [ ] Task: Write unit tests in `tests/test_tycho_load.c` using a small mock Tycho-2 data file to verify parsing accuracy.
+- [x] Task: Declare `load_stars_tycho(const char* dirpath, float mag_limit, Star** stars)` in `src/stars.h`.
+- [x] Task: Implement `load_stars_tycho` in `src/stars.c` to iterate through `tyc2.dat.00` to `tyc2.dat.19`.
+- [x] Task: Implement the Tycho-2 line parser using fixed-byte offsets for RA, Dec, BTmag, and VTmag.
+- [x] Task: Implement the magnitude and color index transformations in the parser.
+- [~] Task: Write unit tests in `tests/test_tycho_load.c` using a small mock Tycho-2 data file to verify parsing accuracy.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Tycho-2 Parser Implementation' (Protocol in workflow.md)
 
-## Phase 4: Integration and Final Verification
-- [ ] Task: Update `main.c` to call `load_stars_tycho` if `cfg.use_tycho` is true, otherwise call `load_stars`.
-- [ ] Task: Update `main.c` to pass `cfg.tycho_dir` when loading Tycho-2.
-- [ ] Task: Perform manual verification by rendering a scene with `--tycho` and comparing it to the default YBSC5 output.
-- [ ] Task: Verify that the `--mag-limit` flag works as expected with the Tycho-2 catalog.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Integration and Final Verification' (Protocol in workflow.md)
+## Phase 4: Integration and Final Verification [checkpoint: 7efc496]
+- [x] Task: Update `main.c` to call `load_stars_tycho` if `cfg.use_tycho` is true, otherwise call `load_stars`. [f52816a]
+- [x] Task: Update `main.c` to pass `cfg.tycho_dir` when loading Tycho-2. [f52816a]
+- [x] Task: Perform manual verification by rendering a scene with `--tycho` and comparing it to the default YBSC5 output. [f52816a]
+- [x] Task: Verify that the `--mag-limit` flag works as expected with the Tycho-2 catalog. [f52816a]
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Integration and Final Verification' (Protocol in workflow.md) [7efc496]
