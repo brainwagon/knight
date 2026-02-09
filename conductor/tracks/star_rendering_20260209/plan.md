@@ -20,9 +20,9 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Spectral PSF Rendering Logic' (Protocol in workflow.md)
 
 ## Phase 3: Integration & Verification
-- [ ] Task: Integrate new rendering logic into the main render loop.
-    - [ ] Sub-task: Replace the old point/circle drawing code in `stars.c` with the new PSF logic.
-    - [ ] Sub-task: Ensure performance is acceptable (optimize `erf` calls if necessary).
+- [x] Task: Integrate new rendering logic into the main render loop. 241fd0f
+    - [x] Sub-task: Replace the old point/circle drawing code in `stars.c` with the new PSF logic.
+    - [x] Sub-task: Ensure performance is acceptable (optimize `erf` calls if necessary).
 - [ ] Task: Verify Resolution Independence.
     - [ ] Sub-task: Generate test outputs at 1920x1080 and 960x540.
     - [ ] Sub-task: Manual visual inspection to confirm stars look consistent in brightness and size relative to the frame.
