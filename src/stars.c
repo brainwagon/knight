@@ -181,6 +181,7 @@ int load_stars_tycho(const char* dirpath, float mag_limit, Star** stars) {
     *stars = (Star*)malloc(sizeof(Star) * max_stars);
     if (!*stars) return -1;
     int count = 0;
+    int files_found = 0;
 
     for (int i = 0; i < 20; i++) {
         char filepath[512];
@@ -189,6 +190,7 @@ int load_stars_tycho(const char* dirpath, float mag_limit, Star** stars) {
         if (!f) {
             continue;
         }
+        files_found++;
 
         char line[256];
         while (fgets(line, sizeof(line), f)) {
@@ -249,6 +251,9 @@ int load_stars_tycho(const char* dirpath, float mag_limit, Star** stars) {
             count++;
         }
         fclose(f);
+    }
+    if (files_found == 0) {
+        printf("Warning: No Tycho-2 data files (tyc2.dat.00-19) found in directory '%s'\n", dirpath);
     }
     return count;
 }

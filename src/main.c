@@ -88,7 +88,14 @@ int main(int argc, char** argv) {
     if (cfg.render_moon) moon_tex = image_load_jpeg("data/moon_albedo.jpg");
 
     Star* stars = NULL;
-    int num_stars = load_stars("data/ybsc5.dat", cfg.star_mag_limit, &stars);
+    int num_stars = 0;
+    if (cfg.use_tycho) {
+        printf("Loading Tycho-2 stars from %s (limit %.1f)...\n", cfg.tycho_dir, cfg.star_mag_limit);
+        num_stars = load_stars_tycho(cfg.tycho_dir, cfg.star_mag_limit, &stars);
+    } else {
+        printf("Loading YBS stars from data/ybsc5.dat (limit %.1f)...\n", cfg.star_mag_limit);
+        num_stars = load_stars("data/ybsc5.dat", cfg.star_mag_limit, &stars);
+    }
     printf("Loaded %d stars.\n", num_stars);
     
     double jd = get_julian_day(cfg.year, cfg.month, cfg.day, cfg.hour);
