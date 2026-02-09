@@ -1,4 +1,4 @@
-# Track constellation_outlines_20260208 Context
+# Track star_rendering_20260209 Context
 
 - [Specification](./spec.md)
 - [Implementation Plan](./plan.md)

@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 #include <stdbool.h>
+#include "core.h"
 
 typedef struct {
     bool render_moon;
@@ -20,6 +21,9 @@ typedef struct {
     float turbidity;
     char* mode;
     float aperture; // in mm
+    bool bloom;
+    float bloom_size; // in degrees
+    RGB outline_color;
 } Config;
 
 void print_help(const char* progname);

@@ -41,6 +41,9 @@ int main(int argc, char** argv) {
     cfg.env_map = false;
     cfg.turbidity = 1.0f;
     cfg.mode = "cpu";
+    cfg.bloom = false;
+    cfg.bloom_size = 0.02f;
+    cfg.outline_color = (RGB){0.0f, 1.0f, 0.0f};
 
     // 1. Process KNIGHT_OPTS environment variable
     char* env_opts = getenv("KNIGHT_OPTS");
@@ -437,14 +440,14 @@ int main(int argc, char** argv) {
     }
     
     printf("Tone Mapping...\n");
-    apply_glare(hdr);
+    if (cfg.bloom) apply_glare(hdr, cfg.bloom_size, cfg.fov);
     ImageRGB* output = image_rgb_create(cfg.width, cfg.height);
     apply_night_post_processing(hdr, output, cfg.exposure_boost);
 
     if (cfg.render_outlines && constellations.count > 0 && !cfg.env_map) {
         printf("Drawing Constellation Outlines and Labels...\n");
-        draw_constellation_outlines(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
-        draw_constellation_labels(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
+        draw_constellation_outlines(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.outline_color);
+        draw_constellation_labels(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.outline_color);
     }
 
     write_pfm(cfg.output_filename, cfg.width, cfg.height, output->pixels);

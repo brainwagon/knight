@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "core.h"
 #include "image.h"
+#include "tonemap.h"
 
 // Vertex on a constellation boundary polygon
 typedef struct {
@@ -50,16 +51,16 @@ void constellation_equ_to_horizon(double jd, double lat, double lon, Constellati
 bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, int width, int height, float* px, float* py);
 
 // Draw constellation outlines to the final image buffer (post-tonemapping)
-void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect);
+void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color);
 
 // Draw constellation labels at their centroids
-void draw_constellation_labels(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect);
+void draw_constellation_labels(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color);
 
 // Draw a single 8x8 character
-void draw_char(Image* img, int x, int y, char c, uint8_t r, uint8_t g, uint8_t b);
+void draw_char(ImageRGB* img, int x, int y, char c, float r, float g, float b);
 
 // Draw a centered 3-letter abbreviation
-void draw_label_centered(Image* img, int x, int y, const char* label, uint8_t r, uint8_t g, uint8_t b);
+void draw_label_centered(ImageRGB* img, int x, int y, const char* label, float r, float g, float b);
 
 // Free constellation boundaries
 void free_constellation_boundaries(ConstellationBoundary* boundary);

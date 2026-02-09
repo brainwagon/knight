@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <string.h>
 #include "constellation.h"
+#include "ephemerides.h"
 
 void test_vertex_structure() {
     ConstellationVertex v;
@@ -16,509 +17,54 @@ void test_vertex_structure() {
 }
 
 void test_load_boundaries() {
-
     ConstellationBoundary boundary;
-
     int result = load_constellation_boundaries("../data/bound_in_20.txt", &boundary);
-
     assert(result == 0);
-
     assert(boundary.count > 0);
-
-    
-
-    // There should be 88 constellations
-
     printf("test_load_boundaries passed: loaded %d vertices, %d constellations\n", boundary.count, boundary.label_count);
-
     assert(boundary.label_count == 88);
-
     assert(boundary.labels[0].ra > 0);
-
-    
-
     free_constellation_boundaries(&boundary);
-
 }
-
-
-
-
-
-
 
 void test_equ_to_horizon() {
-
-
-
-
-
     ConstellationBoundary boundary;
-
-
-
-
-
     load_constellation_boundaries("../data/bound_in_20.txt", &boundary);
-
-
-
-
-
-    
-
-
-
-
-
     double jd = get_julian_day(2026, 2, 8, 10.0);
-
-
-
-
-
     double lat = 45.0;
-
-
-
-
-
     double lon = 0.0;
-
-
-
-
-
-    
-
-
-
-
-
     constellation_equ_to_horizon(jd, lat, lon, &boundary);
-
-
-
-
-
-    
-
-
-
-
-
-    // Check if altitude/azimuth were computed
-
-
-
-
-
     for (int i = 0; i < 10; i++) {
-
-
-
-
-
         assert(!isnan(boundary.vertices[i].alt));
-
-
-
-
-
         assert(!isnan(boundary.vertices[i].az));
-
-
-
-
-
     }
-
-
-
-
-
-    
-
-
-
-
-
     printf("test_equ_to_horizon passed\n");
-
-
-
-
-
     free_constellation_boundaries(&boundary);
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
 
 void test_draw_char() {
-
-
-
-
-
-
-
-
-
-
-
-    Image img;
-
-
-
-
-
-
-
-
-
-
-
+    ImageRGB img;
     img.width = 16;
-
-
-
-
-
-
-
-
-
-
-
     img.height = 16;
-
-
-
-
-
-
-
-
-
-
-
-    img.channels = 3;
-
-
-
-
-
-
-
-
-
-
-
-    img.data = (unsigned char*)calloc(img.width * img.height * img.channels, 1);
-
-
-
-
-
-
-
-
-
-
-
+    img.pixels = (RGB*)calloc(img.width * img.height, sizeof(RGB));
     
-
-
-
-
-
-
-
-
-
-
-
-    // Draw 'A' at 0,0
-
-
-
-
-
-
-
-
-
-
-
-    draw_char(&img, 0, 0, 'A', 255, 255, 255);
-
-
-
-
-
-
-
-
-
-
-
+    draw_char(&img, 0, 0, 'A', 1.0f, 1.0f, 1.0f);
     
-
-
-
-
-
-
-
-
-
-
-
-    // Check top of 'A' (0x18 = 00011000)
-
-
-
-
-
-
-
-
-
-
-
     // Row 0, Col 3 and 4 should be white
-
-
-
-
-
-
-
-
-
-
-
-    int idx3 = (0 * 16 + 3) * 3;
-
-
-
-
-
-
-
-
-
-
-
-    int idx4 = (0 * 16 + 4) * 3;
-
-
-
-
-
-
-
-
-
-
-
-    assert(img.data[idx3] == 255);
-
-
-
-
-
-
-
-
-
-
-
-    assert(img.data[idx4] == 255);
-
-
-
-
-
-
-
-
-
-
-
+    int idx3 = 0 * 16 + 3;
+    int idx4 = 0 * 16 + 4;
+    assert(img.pixels[idx3].r == 1.0f);
+    assert(img.pixels[idx4].r == 1.0f);
     
-
-
-
-
-
-
-
-
-
-
-
-    free(img.data);
-
-
-
-
-
-
-
-
-
-
-
+    free(img.pixels);
     printf("test_draw_char passed\n");
-
-
-
-
-
-
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 int main() {
-
-
-
-
-
-
-
-
-
-
-
     test_vertex_structure();
-
-
-
-
-
-
-
-
-
-
-
     test_load_boundaries();
-
-
-
-
-
-
-
-
-
-
-
     test_equ_to_horizon();
-
-
-
-
-
-
-
-
-
-
-
     test_draw_char();
-
-
-
-
-
-
-
-
-
-
-
     printf("All constellation tests passed!\n");
-
-
-
-
-
-
-
-
-
-
-
     return 0;
-
-
-
-
-
-
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

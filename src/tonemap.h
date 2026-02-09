@@ -28,6 +28,6 @@ void image_rgb_free(ImageRGB* img);
 void apply_night_post_processing(ImageHDR* src, ImageRGB* dst, float exposure_boost_stops);
 
 // Applies a simple glare/bloom effect to bright pixels
-void apply_glare(ImageHDR* img);
+void apply_glare(ImageHDR* img, float bloom_size_deg, float fov_deg);
 
 #endif

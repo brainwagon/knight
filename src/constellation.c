@@ -38,7 +38,7 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
     // Calculate centroids for labels
     if (boundary->count > 0) {
         char current_abbr[4] = "";
-        double sum_ra = 0, sum_dec = 0;
+        double sum_x = 0, sum_y = 0, sum_z = 0;
         int vertex_count = 0;
 
         for (int i = 0; i <= boundary->count; i++) {
@@ -47,18 +47,27 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
             if (end_of_const) {
                 if (boundary->label_count < 88) {
                     ConstellationLabel* l = &boundary->labels[boundary->label_count++];
-                    l->ra = (float)(sum_ra / vertex_count);
-                    l->dec = (float)(sum_dec / vertex_count);
+                    double ax = sum_x / vertex_count;
+                    double ay = sum_y / vertex_count;
+                    double az = sum_z / vertex_count;
+                    
+                    l->ra = (float)atan2(ay, ax);
+                    if (l->ra < 0) l->ra += TWO_PI;
+                    l->dec = (float)asin(az / sqrt(ax*ax + ay*ay + az*az));
+                    
                     strncpy(l->abbr, current_abbr, 3);
                     l->abbr[3] = '\0';
                 }
                 if (i == boundary->count) break;
-                sum_ra = 0; sum_dec = 0; vertex_count = 0;
+                sum_x = 0; sum_y = 0; sum_z = 0; vertex_count = 0;
             }
 
             strcpy(current_abbr, boundary->vertices[i].abbr);
-            sum_ra += boundary->vertices[i].ra;
-            sum_dec += boundary->vertices[i].dec;
+            double ra = boundary->vertices[i].ra;
+            double dec = boundary->vertices[i].dec;
+            sum_x += cos(dec) * cos(ra);
+            sum_y += cos(dec) * sin(ra);
+            sum_z += sin(dec);
             vertex_count++;
         }
     }
@@ -127,17 +136,17 @@ bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float
     return true;
 }
 
-static void draw_line(Image* img, int x0, int y0, int x1, int y1, uint8_t r, uint8_t g, uint8_t b) {
+static void draw_line_rgb(ImageRGB* img, int x0, int y0, int x1, int y1, float r, float g, float b) {
     int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
     int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
     int err = dx + dy, e2;
 
     while (1) {
         if (x0 >= 0 && x0 < img->width && y0 >= 0 && y0 < img->height) {
-            int idx = (y0 * img->width + x0) * 3;
-            img->data[idx + 0] = r;
-            img->data[idx + 1] = g;
-            img->data[idx + 2] = b;
+            int idx = y0 * img->width + x0;
+            img->pixels[idx].r = r;
+            img->pixels[idx].g = g;
+            img->pixels[idx].b = b;
         }
         if (x0 == x1 && y0 == y1) break;
         e2 = 2 * err;
@@ -146,71 +155,77 @@ static void draw_line(Image* img, int x0, int y0, int x1, int y1, uint8_t r, uin
     }
 }
 
-void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect) {
+void draw_constellation_outlines(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color) {
     for (int i = 0; i < boundary->count - 1; i++) {
         ConstellationVertex* v0 = &boundary->vertices[i];
         ConstellationVertex* v1 = &boundary->vertices[i + 1];
 
-        // Only draw if same constellation
         if (strcmp(v0->abbr, v1->abbr) != 0) continue;
+        
+        // Skip if both are below horizon
+        if (v0->direction.y < 0 && v1->direction.y < 0) continue;
 
-        // Skip if both below horizon
-        if (v0->alt < 0 && v1->alt < 0) continue;
+        Vec3 p0 = v0->direction;
+        Vec3 p1 = v1->direction;
+
+        // Clip to horizon (y=0)
+        if (p0.y < 0 || p1.y < 0) {
+            float t = p0.y / (p0.y - p1.y);
+            Vec3 intersect = vec3_add(p0, vec3_mul(vec3_sub(p1, p0), t));
+            intersect = vec3_normalize(intersect);
+            if (p0.y < 0) p0 = intersect;
+            else p1 = intersect;
+        }
 
         float x0, y0, x1, y1;
-        if (project_vertex(v0->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x0, &y0) &&
-            project_vertex(v1->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x1, &y1)) {
+        if (project_vertex(p0, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x0, &y0) &&
+            project_vertex(p1, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x1, &y1)) {
             
-            // Subtle blue-grey for outlines
-            draw_line(img, (int)x0, (int)y0, (int)x1, (int)y1, 60, 70, 90);
+            draw_line_rgb(img, (int)roundf(x0), (int)roundf(y0), (int)roundf(x1), (int)roundf(y1), color.r, color.g, color.b);
         }
     }
 }
 
-void draw_constellation_labels(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect) {
+void draw_constellation_labels(ImageRGB* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, RGB color) {
     for (int i = 0; i < boundary->label_count; i++) {
         ConstellationLabel* l = &boundary->labels[i];
-        
-        // Skip if below horizon
         if (l->alt < 0) continue;
 
         float px, py;
         if (project_vertex(l->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &px, &py)) {
-            // Check if on screen
             if (px >= 0 && px < img->width && py >= 0 && py < img->height) {
-                // Subtle blue-grey color (same as outlines or slightly brighter)
-                draw_label_centered(img, (int)px, (int)py, l->abbr, 80, 90, 110);
+                draw_label_centered(img, (int)roundf(px), (int)roundf(py), l->abbr, color.r, color.g, color.b);
             }
         }
     }
 }
 
-void draw_char(Image* img, int x, int y, char c, uint8_t r, uint8_t g, uint8_t b) {
+void draw_char(ImageRGB* img, int x, int y, char c, float r, float g, float b) {
     if (c < 32 || c >= 127) return;
     const uint8_t* glyph = font8x8_basic[(int)c];
     if (!glyph) return;
 
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            if (glyph[row] & (1 << col)) {
+            if (glyph[row] & (0x80 >> col)) {
                 int px = x + col;
                 int py = y + row;
                 if (px >= 0 && px < img->width && py >= 0 && py < img->height) {
-                    int idx = (py * img->width + px) * 3;
-                    img->data[idx + 0] = r;
-                    img->data[idx + 1] = g;
-                    img->data[idx + 2] = b;
+                    int idx = py * img->width + px;
+                    img->pixels[idx].r = r;
+                    img->pixels[idx].g = g;
+                    img->pixels[idx].b = b;
                 }
             }
         }
     }
 }
 
-void draw_label_centered(Image* img, int x, int y, const char* label, uint8_t r, uint8_t g, uint8_t b) {
+void draw_label_centered(ImageRGB* img, int x, int y, const char* label, float r, float g, float b) {
     int len = (int)strlen(label);
     int total_width = len * 8;
     int start_x = x - total_width / 2;
-    int start_y = y - 4; // Center of 8x8 font
+    int start_y = y - 4;
 
     for (int i = 0; i < len; i++) {
         draw_char(img, start_x + i * 8, start_y, label[i], r, g, b);

@@ -23,8 +23,11 @@ void print_help(const char* progname) {
     printf("  -E, --env            Generate cylindrical environment map\n");
     printf("  -n, --no-moon        Disable moon rendering\n");
     printf("  -O, --outline        Render constellation outlines\n");
+    printf("      --outline-color <hex> Color for outlines (default: 00FF00)\n");
     printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\n");
     printf("  -A, --aperture <mm>  Observer aperture diameter in mm (default: 6.0)\n");
+    printf("  -B, --bloom          Enable bloom/glare effect\n");
+    printf("  -s, --bloom-size <deg> Bloom/glare size in degrees (default: 0.02)\n");
     printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\n");
     printf("      --help           Show this help\n");
 }
@@ -46,8 +49,11 @@ static struct option long_options[] = {
     {"env",     no_argument,       0, 'E'},
     {"no-moon", no_argument,       0, 'n'},
     {"outline", no_argument,       0, 'O'},
+    {"outline-color", required_argument, 0, 'C'},
     {"turbidity", required_argument, 0, 'u'},
     {"aperture", required_argument, 0, 'A'},
+    {"bloom",   no_argument,       0, 'B'},
+    {"bloom-size", required_argument, 0, 's'},
     {"mode",    required_argument, 0, 'M'},
     {"help",    no_argument,       0, '?'},
     {0, 0, 0, 0}
@@ -56,7 +62,7 @@ static struct option long_options[] = {
 void parse_args(int argc, char** argv, Config* cfg) {
     int opt;
     optind = 1;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:A:M:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:A:Bs:C:M:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': cfg->lat = atof(optarg); break;
             case 'L': cfg->lon = atof(optarg); break;
@@ -83,8 +89,19 @@ void parse_args(int argc, char** argv, Config* cfg) {
             case 'E': cfg->env_map = true; break;
             case 'n': cfg->render_moon = false; break;
             case 'O': cfg->render_outlines = true; break;
+            case 'C': {
+                unsigned int hex = 0;
+                if (optarg[0] == '#') sscanf(optarg + 1, "%x", &hex);
+                else sscanf(optarg, "%x", &hex);
+                cfg->outline_color.r = ((hex >> 16) & 0xFF) / 255.0f;
+                cfg->outline_color.g = ((hex >> 8) & 0xFF) / 255.0f;
+                cfg->outline_color.b = (hex & 0xFF) / 255.0f;
+                break;
+            }
             case 'u': cfg->turbidity = atof(optarg); break;
             case 'A': cfg->aperture = atof(optarg); break;
+            case 'B': cfg->bloom = true; break;
+            case 's': cfg->bloom_size = atof(optarg); break;
             case 'M': cfg->mode = optarg; break;
             case '?': print_help(argv[0]); exit(0);
             default: break;

@@ -140,7 +140,7 @@ void apply_night_post_processing(ImageHDR* src, ImageRGB* dst, float exposure_bo
     }
 }
 
-void apply_glare(ImageHDR* img) {
+void apply_glare(ImageHDR* img, float bloom_size_deg, float fov_deg) {
     int w = img->width;
     int h = img->height;
     XYZV* temp = (XYZV*)calloc(w * h, sizeof(XYZV));
@@ -148,25 +148,30 @@ void apply_glare(ImageHDR* img) {
     // Copy original
     memcpy(temp, img->pixels, w * h * sizeof(XYZV));
     
-    // Threshold to prevent glowing sky
-    float threshold = 0.5f; 
+    // Threshold to prevent glowing sky. 0.01 is bright enough for stars but low enough for consistency.
+    float threshold = 0.01f; 
     
-    // Sigma for Gaussian
-    float sigma = 0.8f;
+    // Sigma for Gaussian. Make it angularly consistent.
+    float sigma = (bloom_size_deg / fov_deg) * w;
+    if (sigma < 0.8f) sigma = 0.8f; // Minimum blur
+    
     float inv_2sigma2 = 1.0f / (2.0f * sigma * sigma);
     
     // Spread factor (total energy redistributed)
     float spread_factor = 0.05f;
+            
+    int k_radius = (int)(sigma * 3.0f);
+    if (k_radius < 2) k_radius = 2;
+    if (k_radius > 10) k_radius = 10; // Cap for performance
             
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             XYZV p = temp[y * w + x];
             if (p.Y < threshold) continue; 
             
-            // 5x5 Gaussian spread
-            for (int ky = -2; ky <= 2; ky++) {
-                for (int kx = -2; kx <= 2; kx++) {
-                    if (kx == 0 && ky == 0) continue; // Don't add back to self
+            for (int ky = -k_radius; ky <= k_radius; ky++) {
+                for (int kx = -k_radius; kx <= k_radius; kx++) {
+                    if (kx == 0 && ky == 0) continue; 
                     
                     int nx = x + kx;
                     int ny = y + ky;
@@ -175,9 +180,8 @@ void apply_glare(ImageHDR* img) {
                         float dist2 = (float)(kx*kx + ky*ky);
                         float wgt = expf(-dist2 * inv_2sigma2);
                         
-                        // Normalized weight approx (sum of 5x5 gaussian excluding center is roughly 3.3 for sigma=0.8)
-                        // We scale so total spread is spread_factor.
-                        float s = wgt * spread_factor * 0.2f; 
+                        // Normalized weight approx
+                        float s = wgt * spread_factor * (1.0f / (6.28f * sigma * sigma)); 
                         
                         XYZV* dest = &img->pixels[ny * w + nx];
                         dest->X += p.X * s;
