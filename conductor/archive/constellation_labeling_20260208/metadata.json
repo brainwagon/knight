@@ -1,0 +1,8 @@
+{
+  "track_id": "constellation_labeling_20260208",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-08T11:00:00Z",
+  "updated_at": "2026-02-08T11:00:00Z",
+  "description": "Label the center of each constellation region with its three letter abbreviation using a hardcoded 8x8 font when --outline is enabled."
+}
