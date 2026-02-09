@@ -6,3 +6,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: bugfix: constellation outlines only appear near the top of the output, and have a dashed appearance. Constellation labels appear to be entirely missing.**
   *Link: [./tracks/constellation_fix_20260208/](./tracks/constellation_fix_20260208/)*
+
+---
+
+- [x] **Track: Font Rendering Fix and IBM VGA Replacement**
+  *Link: [./tracks/font_vga_20260208/](./tracks/font_vga_20260208/)*
