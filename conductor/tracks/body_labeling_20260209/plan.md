@@ -1,6 +1,6 @@
 # Implementation Plan - Celestial Body Labeling
 
-## Phase 1: Configuration & Infrastructure
+## Phase 1: Configuration & Infrastructure [checkpoint: 4346f66]
 - [x] Task: Update `Config` struct in `src/config.h` to include `label_bodies` and `label_color`. bc371f9
 - [x] Task: Update `parse_args` in `src/config.c` to handle `--label-bodies` (`-j`) and `--label-color`. bc371f9
 - [x] Task: Initialize defaults for new configuration options in `src/main.c`. bc371f9
