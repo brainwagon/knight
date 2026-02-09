@@ -557,10 +557,11 @@ int main(int argc, char** argv) {
     apply_night_post_processing(hdr, output, cfg.exposure_boost);
 
     if (cfg.render_outlines && constellations.count > 0 && !cfg.env_map) {
-        printf("Drawing Constellation Outlines...\n");
+        printf("Drawing Constellation Outlines and Labels...\n");
         // Convert ImageRGB to Image for the drawing function (they are compatible in data layout)
         Image img = {cfg.width, cfg.height, 3, (unsigned char*)output->pixels};
         draw_constellation_outlines(&img, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
+        draw_constellation_labels(&img, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
     }
 
     write_pfm(cfg.output_filename, cfg.width, cfg.height, output->pixels);

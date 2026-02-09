@@ -167,6 +167,24 @@ void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Ve
     }
 }
 
+void draw_constellation_labels(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect) {
+    for (int i = 0; i < boundary->label_count; i++) {
+        ConstellationLabel* l = &boundary->labels[i];
+        
+        // Skip if below horizon
+        if (l->alt < 0) continue;
+
+        float px, py;
+        if (project_vertex(l->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &px, &py)) {
+            // Check if on screen
+            if (px >= 0 && px < img->width && py >= 0 && py < img->height) {
+                // Subtle blue-grey color (same as outlines or slightly brighter)
+                draw_label_centered(img, (int)px, (int)py, l->abbr, 80, 90, 110);
+            }
+        }
+    }
+}
+
 void draw_char(Image* img, int x, int y, char c, uint8_t r, uint8_t g, uint8_t b) {
     if (c < 32 || c >= 127) return;
     const uint8_t* glyph = font8x8_basic[(int)c];
