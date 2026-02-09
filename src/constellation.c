@@ -47,8 +47,7 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
             ConstellationVertex* v = &boundary->vertices[boundary->count];
             v->ra = ra_h * 15.0f * DEG2RAD; // Convert hours to radians
             v->dec = dec_d * DEG2RAD;        // Convert degrees to radians
-            strncpy(v->abbr, abbr, 3);
-            v->abbr[3] = '\0';
+            snprintf(v->abbr, sizeof(v->abbr), "%s", abbr);
             boundary->count++;
         }
     }
