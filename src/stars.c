@@ -94,10 +94,8 @@ void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, flo
     }
 
     float pinhole_f_px = 0;
-    float pinhole_sa = 0;
     if (!cam->env_map) {
         pinhole_f_px = cam->height / (2.0f * cam->tan_half_fov);
-        pinhole_sa = (4.0f * cam->tan_half_fov * cam->tan_half_fov * cam->aspect) / (cam->width * cam->height);
     }
 
     for (int i = 0; i < num_stars; i++) {
@@ -129,11 +127,6 @@ void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, flo
         float T = expf(-0.1f / (s.direction.y + 0.01f)); 
         spectrum_mul(&spec, T);
 
-        float solid_angle = pinhole_sa;
-        if (cam->env_map) {
-            solid_angle = (6.283185f / cam->width) * (3.14159f / cam->height) * cosf(asinf(s.direction.y));
-        }
-
         for (int b = 0; b < SPECTRUM_BANDS; b++) {
             float sigma_px;
             if (cam->env_map) {
@@ -142,9 +135,6 @@ void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, flo
                 sigma_px = sigmas_ang[b] * pinhole_f_px;
             }
             
-            // Perceptual minimum size to avoid sub-pixel invisibility
-            if (sigma_px < 0.5f) sigma_px = 0.5f;
-
             int radius = (int)(sigma_px * 4.0f) + 1;
             int x_start = (int)px - radius;
             int x_end = (int)px + radius;
@@ -158,18 +148,17 @@ void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, flo
 
             float val_band = spec.s[b];
             XYZV xyz_base = CIE_XYZV_weighted[b];
-            float rad_factor_base = val_band / (solid_angle + 1e-15f);
 
             for (int iy = y_start; iy <= y_end; iy++) {
                 for (int ix = x_start; ix <= x_end; ix++) {
                     float weight = integrate_gaussian_2d((float)ix - px, (float)iy - py, (float)ix + 1.0f - px, (float)iy + 1.0f - py, sigma_px);
-                    float rad_factor = weight * rad_factor_base;
+                    float energy = val_band * weight;
                     
                     int idx = iy * cam->width + ix;
-                    hdr->pixels[idx].X += rad_factor * xyz_base.X;
-                    hdr->pixels[idx].Y += rad_factor * xyz_base.Y;
-                    hdr->pixels[idx].Z += rad_factor * xyz_base.Z;
-                    hdr->pixels[idx].V += rad_factor * xyz_base.V;
+                    hdr->pixels[idx].X += energy * xyz_base.X;
+                    hdr->pixels[idx].Y += energy * xyz_base.Y;
+                    hdr->pixels[idx].Z += energy * xyz_base.Z;
+                    hdr->pixels[idx].V += energy * xyz_base.V;
                 }
             }
         }
