@@ -5,6 +5,7 @@
 #include "tonemap.h"
 #include "image.h"
 #include "zodiacal.h"
+#include "constellation.h"
 #include "cuda_host.h"
 #include <getopt.h>
 #include <time.h>
@@ -218,6 +219,16 @@ int main(int argc, char** argv) {
             float p_az = planets[i].az * RAD2DEG;
             if (p_az < 0) p_az += 360.0f;
             printf("Planet %-8s: Alt %6.2f, Az %6.2f, Mag %5.1f\n", planets[i].name, planets[i].alt*RAD2DEG, p_az, planets[i].vmag);
+        }
+    }
+
+    ConstellationBoundary constellations = {NULL, 0};
+    if (cfg.render_outlines) {
+        if (load_constellation_boundaries("data/bound_in_20.txt", &constellations) == 0) {
+            printf("Loaded %d constellation boundary vertices.\n", constellations.count);
+            constellation_equ_to_horizon(jd, cfg.lat, cfg.lon, &constellations);
+        } else {
+            printf("Warning: Could not load constellation boundaries.\n");
         }
     }
     
@@ -544,6 +555,14 @@ int main(int argc, char** argv) {
     apply_glare(hdr);
     ImageRGB* output = image_rgb_create(cfg.width, cfg.height);
     apply_night_post_processing(hdr, output, cfg.exposure_boost);
+
+    if (cfg.render_outlines && constellations.count > 0 && !cfg.env_map) {
+        printf("Drawing Constellation Outlines...\n");
+        // Convert ImageRGB to Image for the drawing function (they are compatible in data layout)
+        Image img = {cfg.width, cfg.height, 3, (unsigned char*)output->pixels};
+        draw_constellation_outlines(&img, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect);
+    }
+
     write_pfm(cfg.output_filename, cfg.width, cfg.height, output->pixels);
     printf("Done. Saved to %s\n", cfg.output_filename);
     
@@ -566,5 +585,6 @@ int main(int argc, char** argv) {
     }
     
     image_hdr_free(hdr); image_rgb_free(output); image_free(moon_tex); free(stars);
+    free_constellation_boundaries(&constellations);
     return 0;
 }

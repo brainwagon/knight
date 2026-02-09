@@ -1,7 +1,10 @@
 #ifndef CONSTELLATION_H
 #define CONSTELLATION_H
 
+#include <stdint.h>
+#include <stdbool.h>
 #include "core.h"
+#include "image.h"
 
 // Vertex on a constellation boundary polygon
 typedef struct {
