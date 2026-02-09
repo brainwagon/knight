@@ -1,0 +1,8 @@
+{
+  "track_id": "constellation_fix_20260208",
+  "type": "bugfix",
+  "status": "new",
+  "created_at": "2026-02-08T12:00:00Z",
+  "updated_at": "2026-02-08T12:00:00Z",
+  "description": "bugfix: constellation outlines only appear near the top of the output, and have a dashed appearance. Constellation labels appear to be entirely missing."
+}
