@@ -24,6 +24,8 @@ void print_help(const char* progname) {
     printf("  -n, --no-moon        Disable moon rendering\n");
     printf("  -O, --outline        Render constellation outlines\n");
     printf("      --outline-color <hex> Color for outlines (default: 00FF00)\n");
+    printf("  -j, --label-bodies   Label planets, sun, and moon\n");
+    printf("      --label-color <hex> Color for labels (default: FF0000)\n");
     printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\n");
     printf("  -A, --aperture <mm>  Observer aperture diameter in mm (default: 6.0)\n");
     printf("  -B, --bloom          Enable bloom/glare effect\n");
@@ -50,6 +52,8 @@ static struct option long_options[] = {
     {"no-moon", no_argument,       0, 'n'},
     {"outline", no_argument,       0, 'O'},
     {"outline-color", required_argument, 0, 'C'},
+    {"label-bodies", no_argument,       0, 'j'},
+    {"label-color", required_argument, 0, 'K'},
     {"turbidity", required_argument, 0, 'u'},
     {"aperture", required_argument, 0, 'A'},
     {"bloom",   no_argument,       0, 'B'},
@@ -62,7 +66,7 @@ static struct option long_options[] = {
 void parse_args(int argc, char** argv, Config* cfg) {
     int opt;
     optind = 1;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:A:Bs:C:M:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:A:Bs:C:jK:M:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': cfg->lat = atof(optarg); break;
             case 'L': cfg->lon = atof(optarg); break;
@@ -96,6 +100,16 @@ void parse_args(int argc, char** argv, Config* cfg) {
                 cfg->outline_color.r = ((hex >> 16) & 0xFF) / 255.0f;
                 cfg->outline_color.g = ((hex >> 8) & 0xFF) / 255.0f;
                 cfg->outline_color.b = (hex & 0xFF) / 255.0f;
+                break;
+            }
+            case 'j': cfg->label_bodies = true; break;
+            case 'K': {
+                unsigned int hex = 0;
+                if (optarg[0] == '#') sscanf(optarg + 1, "%x", &hex);
+                else sscanf(optarg, "%x", &hex);
+                cfg->label_color.r = ((hex >> 16) & 0xFF) / 255.0f;
+                cfg->label_color.g = ((hex >> 8) & 0xFF) / 255.0f;
+                cfg->label_color.b = (hex & 0xFF) / 255.0f;
                 break;
             }
             case 'u': cfg->turbidity = atof(optarg); break;

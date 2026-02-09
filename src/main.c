@@ -44,6 +44,8 @@ int main(int argc, char** argv) {
     cfg.bloom = false;
     cfg.bloom_size = 0.02f;
     cfg.outline_color = (RGB){0.0f, 1.0f, 0.0f};
+    cfg.label_bodies = false;
+    cfg.label_color = (RGB){1.0f, 0.0f, 0.0f};
 
     // 1. Process KNIGHT_OPTS environment variable
     char* env_opts = getenv("KNIGHT_OPTS");

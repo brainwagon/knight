@@ -24,6 +24,8 @@ typedef struct {
     bool bloom;
     float bloom_size; // in degrees
     RGB outline_color;
+    bool label_bodies;
+    RGB label_color;
 } Config;
 
 void print_help(const char* progname);

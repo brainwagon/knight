@@ -6,6 +6,7 @@ SRC = test_constellation.c ../src/core.c ../src/constellation.c ../src/ephemerid
 OBJ = $(SRC:.c=.o)
 TARGET = test_constellation
 CONFIG_TARGET = test_config
+LABEL_CONFIG_TARGET = test_label_config
 MATH_TARGET = test_math
 PSF_TARGET = test_psf
 
@@ -13,9 +14,10 @@ DIAG_SRC = diagnostic_projection.c ../src/core.c ../src/constellation.c ../src/e
 DIAG_OBJ = $(DIAG_SRC:.c=.o)
 DIAG_TARGET = diagnostic_projection
 
-all: $(TARGET) $(CONFIG_TARGET) $(MATH_TARGET) $(PSF_TARGET)
+all: $(TARGET) $(CONFIG_TARGET) $(LABEL_CONFIG_TARGET) $(MATH_TARGET) $(PSF_TARGET)
 	./$(TARGET)
 	./$(CONFIG_TARGET)
+	./$(LABEL_CONFIG_TARGET)
 	./$(MATH_TARGET)
 	./$(PSF_TARGET)
 
@@ -24,6 +26,9 @@ $(TARGET): $(OBJ)
 
 $(CONFIG_TARGET): test_config.o ../src/config.o
 	$(CC) test_config.o ../src/config.o -o $(CONFIG_TARGET) $(LDFLAGS)
+
+$(LABEL_CONFIG_TARGET): test_label_config.o ../src/config.o ../src/core.o
+	$(CC) test_label_config.o ../src/config.o ../src/core.o -o $(LABEL_CONFIG_TARGET) $(LDFLAGS)
 
 $(MATH_TARGET): test_math.o ../src/core.o
 	$(CC) test_math.o ../src/core.o -o $(MATH_TARGET) $(LDFLAGS)
