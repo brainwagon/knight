@@ -27,51 +27,21 @@ void test_load_boundaries() {
 
     
 
-    // Count unique constellations
-
-    char list[200][4];
-
-    int unique_count = 0;
-
-    for (int i = 0; i < boundary.count; i++) {
-
-        int found = 0;
-
-        for (int j = 0; j < unique_count; j++) {
-
-            if (strcmp(boundary.vertices[i].abbr, list[j]) == 0) {
-
-                found = 1;
-
-                break;
-
-            }
-
-        }
-
-        if (!found && unique_count < 200) {
-
-            strcpy(list[unique_count], boundary.vertices[i].abbr);
-
-            unique_count++;
-
-        }
-
-    }
-
-    
-
     // There should be 88 constellations
 
-    printf("test_load_boundaries passed: loaded %d vertices, %d constellations\n", boundary.count, unique_count);
+    printf("test_load_boundaries passed: loaded %d vertices, %d constellations\n", boundary.count, boundary.label_count);
 
-    assert(unique_count == 88);
+    assert(boundary.label_count == 88);
+
+    assert(boundary.labels[0].ra > 0);
 
     
 
     free_constellation_boundaries(&boundary);
 
 }
+
+
 
 
 

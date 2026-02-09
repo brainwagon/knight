@@ -18,10 +18,25 @@ typedef struct {
     Vec3 direction; // Cartesian direction in horizon/world space
 } ConstellationVertex;
 
+// A label for a constellation at its centroid
+typedef struct {
+    float ra;   // Right Ascension (radians)
+    float dec;  // Declination (radians)
+    char abbr[4]; // 3-letter abbreviation
+    
+    // Computed screen/horizon coordinates
+    float az;
+    float alt;
+    Vec3 direction;
+} ConstellationLabel;
+
 // A collection of vertices for all constellation boundaries
 typedef struct {
     ConstellationVertex* vertices;
     int count;
+
+    ConstellationLabel labels[88];
+    int label_count;
 } ConstellationBoundary;
 
 // Load constellation boundaries from data/bound_in_20.txt

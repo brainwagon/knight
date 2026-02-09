@@ -13,6 +13,7 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
     int capacity = 1024;
     boundary->vertices = (ConstellationVertex*)malloc(sizeof(ConstellationVertex) * capacity);
     boundary->count = 0;
+    boundary->label_count = 0;
 
     char line[128];
     while (fgets(line, sizeof(line), f)) {
@@ -32,8 +33,36 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
             boundary->count++;
         }
     }
-
     fclose(f);
+
+    // Calculate centroids for labels
+    if (boundary->count > 0) {
+        char current_abbr[4] = "";
+        double sum_ra = 0, sum_dec = 0;
+        int vertex_count = 0;
+
+        for (int i = 0; i <= boundary->count; i++) {
+            bool end_of_const = (i == boundary->count) || (vertex_count > 0 && strcmp(boundary->vertices[i].abbr, current_abbr) != 0);
+
+            if (end_of_const) {
+                if (boundary->label_count < 88) {
+                    ConstellationLabel* l = &boundary->labels[boundary->label_count++];
+                    l->ra = (float)(sum_ra / vertex_count);
+                    l->dec = (float)(sum_dec / vertex_count);
+                    strncpy(l->abbr, current_abbr, 3);
+                    l->abbr[3] = '\0';
+                }
+                if (i == boundary->count) break;
+                sum_ra = 0; sum_dec = 0; vertex_count = 0;
+            }
+
+            strcpy(current_abbr, boundary->vertices[i].abbr);
+            sum_ra += boundary->vertices[i].ra;
+            sum_dec += boundary->vertices[i].dec;
+            vertex_count++;
+        }
+    }
+
     return 0;
 }
 
@@ -42,6 +71,7 @@ void constellation_equ_to_horizon(double jd, double lat, double lon, Constellati
     double lmst = local_mean_sidereal_time(gmst, lon);
     double lat_rad = lat * DEG2RAD;
 
+    // Transform boundary vertices
     for (int i = 0; i < boundary->count; i++) {
         ConstellationVertex* v = &boundary->vertices[i];
         
@@ -51,7 +81,6 @@ void constellation_equ_to_horizon(double jd, double lat, double lon, Constellati
         double alt = asin(sin_alt);
         
         double cos_az = (sin(v->dec) - sin(alt) * sin(lat_rad)) / (cos(alt) * cos(lat_rad));
-        // Clamp cos_az to [-1, 1] to avoid NaN from rounding errors
         if (cos_az > 1.0) cos_az = 1.0;
         if (cos_az < -1.0) cos_az = -1.0;
         
@@ -60,11 +89,31 @@ void constellation_equ_to_horizon(double jd, double lat, double lon, Constellati
         
         v->az = (float)az;
         v->alt = (float)alt;
-        
-        // Cartesian direction in horizon space: Y=Up, Z=North, X=East
         v->direction.x = (float)(cos(alt) * sin(az));
         v->direction.y = (float)sin(alt);
         v->direction.z = (float)(cos(alt) * cos(az));
+    }
+
+    // Transform label centroids
+    for (int i = 0; i < boundary->label_count; i++) {
+        ConstellationLabel* l = &boundary->labels[i];
+        
+        double ha = lmst - l->ra;
+        double sin_alt = sin(lat_rad) * sin(l->dec) + cos(lat_rad) * cos(l->dec) * cos(ha);
+        double alt = asin(sin_alt);
+        
+        double cos_az = (sin(l->dec) - sin(alt) * sin(lat_rad)) / (cos(alt) * cos(lat_rad));
+        if (cos_az > 1.0) cos_az = 1.0;
+        if (cos_az < -1.0) cos_az = -1.0;
+        
+        double az = acos(cos_az);
+        if (sin(ha) > 0) az = 2.0 * PI - az;
+        
+        l->az = (float)az;
+        l->alt = (float)alt;
+        l->direction.x = (float)(cos(alt) * sin(az));
+        l->direction.y = (float)sin(alt);
+        l->direction.z = (float)(cos(alt) * cos(az));
     }
 }
 
