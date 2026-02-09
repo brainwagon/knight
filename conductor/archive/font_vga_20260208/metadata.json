@@ -1,0 +1,8 @@
+{
+  "track_id": "font_vga_20260208",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-08T13:00:00Z",
+  "updated_at": "2026-02-08T13:00:00Z",
+  "description": "Font Rendering Fix and IBM VGA Replacement: Correct left-to-right reversal and substitute the font with IBM VGA 8x8 supporting full ASCII 32-126."
+}
