@@ -7,7 +7,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: bugfix: star brightnesses appear to vary considerably depending on output resolution. Implement spectral PSF for consistent rendering.**
 *Link: [./tracks/star_rendering_20260209/](./tracks/star_rendering_20260209/)*
 
----
-
-- [x] **Track: Eliminate all compiler warnings for a clean build.**
-*Link: [./tracks/eliminate_warnings_20260209/](./eliminate_warnings_20260209/)*
