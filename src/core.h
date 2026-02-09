@@ -97,4 +97,7 @@ void write_pfm(const char* filename, int width, int height, const RGB* data);
 XYZV spectrum_to_xyzv(const Spectrum* s);
 RGB xyz_to_srgb(float X, float Y, float Z);
 
+// Math utilities
+float integrate_gaussian_2d(float x0, float y0, float x1, float y1, float sigma);
+
 #endif

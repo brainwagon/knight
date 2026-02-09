@@ -103,6 +103,16 @@ RGB xyz_to_srgb(float X, float Y, float Z) {
     return (RGB){r, g, b};
 }
 
+float integrate_gaussian_2d(float x0, float y0, float x1, float y1, float sigma) {
+    if (sigma <= 0.0f) return 0.0f;
+    
+    float inv_sigma_sqrt2 = 1.0f / (sigma * sqrtf(2.0f));
+    float ix = 0.5f * (erff(x1 * inv_sigma_sqrt2) - erff(x0 * inv_sigma_sqrt2));
+    float iy = 0.5f * (erff(y1 * inv_sigma_sqrt2) - erff(y0 * inv_sigma_sqrt2));
+    
+    return ix * iy;
+}
+
 void write_pfm(const char* filename, int width, int height, const RGB* data) {
     FILE* f = fopen(filename, "wb");
     if (!f) return;
