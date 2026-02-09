@@ -1,6 +1,6 @@
 # Implementation Plan - Consistent Star Rendering
 
-## Phase 1: Math Foundation & Configuration
+## Phase 1: Math Foundation & Configuration [checkpoint: 8d167aa]
 - [x] Task: Add `--aperture` argument to CLI configuration. 30bf817
     - [x] Sub-task: Update `config` struct in `main.c` to hold aperture size (default 6.0mm).
     - [x] Sub-task: Parse `-a` / `--aperture` flag.
