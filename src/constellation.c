@@ -73,8 +73,7 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
                     if (l->ra < 0) l->ra += TWO_PI;
                     l->dec = (float)asin(az / sqrt(ax*ax + ay*ay + az*az));
                     
-                    strncpy(l->abbr, current_abbr, 3);
-                    l->abbr[3] = '\0';
+                    snprintf(l->abbr, sizeof(l->abbr), "%s", current_abbr);
                 }
                 if (i == boundary->count) break;
                 sum_x = 0; sum_y = 0; sum_z = 0; vertex_count = 0;
