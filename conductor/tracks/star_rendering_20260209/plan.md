@@ -11,12 +11,12 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Math Foundation & Configuration' (Protocol in workflow.md)
 
 ## Phase 2: Spectral PSF Rendering Logic
-- [ ] Task: Refactor Star Rendering to use PSF.
-    - [ ] Sub-task: Update `stars.c` to use the new physics-based approach.
-    - [ ] Sub-task: Calculate angular size per spectral band: `theta = 1.22 * lambda / aperture`.
-    - [ ] Sub-task: Convert angular size to pixel coordinates (sigma in pixels) based on current resolution/FOV.
-    - [ ] Sub-task: Apply `integrate_gaussian_2d` for each pixel in the star's bounding box.
-    - [ ] Sub-task: TDD - Write a test that simulates rendering a star at two different resolutions (e.g., 100x100 vs 200x200), summing the total pixel values. The total flux should be consistent.
+- [x] Task: Refactor Star Rendering to use PSF. 1e34523
+    - [x] Sub-task: Update `stars.c` to use the new physics-based approach.
+    - [x] Sub-task: Calculate angular size per spectral band: `theta = 1.22 * lambda / aperture`.
+    - [x] Sub-task: Convert angular size to pixel coordinates (sigma in pixels) based on current resolution/FOV.
+    - [x] Sub-task: Apply `integrate_gaussian_2d` for each pixel in the star's bounding box.
+    - [x] Sub-task: TDD - Write a test that simulates rendering a star at two different resolutions (e.g., 100x100 vs 200x200), summing the total pixel values. The total flux should be consistent.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Spectral PSF Rendering Logic' (Protocol in workflow.md)
 
 ## Phase 3: Integration & Verification
