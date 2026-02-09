@@ -77,14 +77,166 @@ void test_load_boundaries() {
 
 
 
+void test_equ_to_horizon() {
+
+
+
+
+
+    ConstellationBoundary boundary;
+
+
+
+
+
+    load_constellation_boundaries("../data/bound_in_20.txt", &boundary);
+
+
+
+
+
+    
+
+
+
+
+
+    double jd = get_julian_day(2026, 2, 8, 10.0);
+
+
+
+
+
+    double lat = 45.0;
+
+
+
+
+
+    double lon = 0.0;
+
+
+
+
+
+    
+
+
+
+
+
+    constellation_equ_to_horizon(jd, lat, lon, &boundary);
+
+
+
+
+
+    
+
+
+
+
+
+    // Check if altitude/azimuth were computed
+
+
+
+
+
+    for (int i = 0; i < 10; i++) {
+
+
+
+
+
+        assert(!isnan(boundary.vertices[i].alt));
+
+
+
+
+
+        assert(!isnan(boundary.vertices[i].az));
+
+
+
+
+
+    }
+
+
+
+
+
+    
+
+
+
+
+
+    printf("test_equ_to_horizon passed\n");
+
+
+
+
+
+    free_constellation_boundaries(&boundary);
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
 int main() {
+
+
+
+
 
     test_vertex_structure();
 
+
+
+
+
     test_load_boundaries();
+
+
+
+
+
+    test_equ_to_horizon();
+
+
+
+
 
     printf("All constellation tests passed!\n");
 
+
+
+
+
     return 0;
 
+
+
+
+
 }
+
+
+
+
+
+

@@ -25,6 +25,9 @@ typedef struct {
 // Returns 0 on success, -1 on error.
 int load_constellation_boundaries(const char* filepath, ConstellationBoundary* boundary);
 
+// Transforms constellation vertex coordinates from Equatorial (RA/Dec) to Horizon (Alt/Az) and Cartesian direction.
+void constellation_equ_to_horizon(double jd, double lat, double lon, ConstellationBoundary* boundary);
+
 // Free constellation boundaries
 void free_constellation_boundaries(ConstellationBoundary* boundary);
 

@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -g -I../src
 LDFLAGS = -lm
 
-SRC = test_constellation.c ../src/core.c ../src/constellation.c
+SRC = test_constellation.c ../src/core.c ../src/constellation.c ../src/ephemerides.c ../src/stars.c
 OBJ = $(SRC:.c=.o)
 TARGET = test_constellation
 
