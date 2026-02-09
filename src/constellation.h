@@ -28,6 +28,12 @@ int load_constellation_boundaries(const char* filepath, ConstellationBoundary* b
 // Transforms constellation vertex coordinates from Equatorial (RA/Dec) to Horizon (Alt/Az) and Cartesian direction.
 void constellation_equ_to_horizon(double jd, double lat, double lon, ConstellationBoundary* boundary);
 
+// Project a single vertex to screen coordinates. Returns true if in front of camera.
+bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, int width, int height, float* px, float* py);
+
+// Draw constellation outlines to the final image buffer (post-tonemapping)
+void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect);
+
 // Free constellation boundaries
 void free_constellation_boundaries(ConstellationBoundary* boundary);
 

@@ -67,6 +67,56 @@ void constellation_equ_to_horizon(double jd, double lat, double lon, Constellati
     }
 }
 
+bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect, int width, int height, float* px, float* py) {
+    float dz = vec3_dot(v_dir, cam_fwd);
+    if (dz <= 0) return false;
+
+    *px = (vec3_dot(v_dir, cam_right) / dz / (aspect * tan_half_fov) + 1.0f) * 0.5f * width;
+    *py = (1.0f - vec3_dot(v_dir, cam_up) / dz / tan_half_fov) * 0.5f * height;
+
+    return true;
+}
+
+static void draw_line(Image* img, int x0, int y0, int x1, int y1, uint8_t r, uint8_t g, uint8_t b) {
+    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy, e2;
+
+    while (1) {
+        if (x0 >= 0 && x0 < img->width && y0 >= 0 && y0 < img->height) {
+            int idx = (y0 * img->width + x0) * 3;
+            img->data[idx + 0] = r;
+            img->data[idx + 1] = g;
+            img->data[idx + 2] = b;
+        }
+        if (x0 == x1 && y0 == y1) break;
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
+void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect) {
+    for (int i = 0; i < boundary->count - 1; i++) {
+        ConstellationVertex* v0 = &boundary->vertices[i];
+        ConstellationVertex* v1 = &boundary->vertices[i + 1];
+
+        // Only draw if same constellation
+        if (strcmp(v0->abbr, v1->abbr) != 0) continue;
+
+        // Skip if both below horizon
+        if (v0->alt < 0 && v1->alt < 0) continue;
+
+        float x0, y0, x1, y1;
+        if (project_vertex(v0->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x0, &y0) &&
+            project_vertex(v1->direction, cam_fwd, cam_up, cam_right, tan_half_fov, aspect, img->width, img->height, &x1, &y1)) {
+            
+            // Subtle blue-grey for outlines
+            draw_line(img, (int)x0, (int)y0, (int)x1, (int)y1, 60, 70, 90);
+        }
+    }
+}
+
 void free_constellation_boundaries(ConstellationBoundary* boundary) {
     if (boundary->vertices) {
         free(boundary->vertices);

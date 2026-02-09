@@ -28,6 +28,7 @@ void print_help(const char* progname) {
     printf("  -e, --exposure <val> Exposure boost in f-stops (default: 0.0)\n");
     printf("  -E, --env            Generate cylindrical environment map\n");
     printf("  -n, --no-moon        Disable moon rendering\n");
+    printf("  -O, --outline        Render constellation outlines\n");
     printf("  -u, --turbidity <val> Atmospheric turbidity (Mie scattering multiplier, default: 1.0)\n");
     printf("      --mode <cpu|gpu> Rendering mode (default: cpu)\n");
     printf("      --help           Show this help\n");
@@ -49,6 +50,7 @@ static struct option long_options[] = {
     {"exposure",required_argument, 0, 'e'},
     {"env",     no_argument,       0, 'E'},
     {"no-moon", no_argument,       0, 'n'},
+    {"outline", no_argument,       0, 'O'},
     {"turbidity", required_argument, 0, 'u'},
     {"mode",    required_argument, 0, 'M'},
     {"help",    no_argument,       0, '?'},
@@ -57,6 +59,7 @@ static struct option long_options[] = {
 
 typedef struct {
     bool render_moon;
+    bool render_outlines;
     bool convert_to_png;
     char* track_body;
     int year, month, day;
@@ -74,7 +77,7 @@ typedef struct {
 
 void parse_args(int argc, char** argv, Config* cfg) {
     int opt;
-    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:Enu:M:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:L:d:t:a:z:f:w:h:o:cT:e:EnOu:M:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l': cfg->lat = atof(optarg); break;
             case 'L': cfg->lon = atof(optarg); break;
@@ -100,6 +103,7 @@ void parse_args(int argc, char** argv, Config* cfg) {
             case 'e': cfg->exposure_boost = atof(optarg); break;
             case 'E': cfg->env_map = true; break;
             case 'n': cfg->render_moon = false; break;
+            case 'O': cfg->render_outlines = true; break;
             case 'u': cfg->turbidity = atof(optarg); break;
             case 'M': cfg->mode = optarg; break;
             case '?': print_help(argv[0]); exit(0);
@@ -111,6 +115,7 @@ void parse_args(int argc, char** argv, Config* cfg) {
 int main(int argc, char** argv) {
     Config cfg;
     cfg.render_moon = true;
+    cfg.render_outlines = false;
     cfg.convert_to_png = false;
     cfg.track_body = NULL;
     
