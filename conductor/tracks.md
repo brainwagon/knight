@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: feature: add an option to enable the labeling of planets/sun/moon.**
+- [x] **Track: feature: add an option to enable the labeling of planets/sun/moon.**
 *Link: [./tracks/body_labeling_20260209/](./tracks/body_labeling_20260209/)*
