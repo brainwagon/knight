@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "core.h"
 #include "atmosphere.h"
+#include "stars.h"
 
 #ifdef CUDA_ENABLED
 
@@ -26,6 +27,15 @@ bool cuda_render_frame(
     bool env_map,
     unsigned char* moon_tex_data, int moon_tex_w, int moon_tex_h,
     XYZV* out_pixels // buffer on host to copy results to
+);
+
+bool cuda_upload_stars(const Star* stars, int num_stars);
+
+bool cuda_render_stars(
+    int width, int height,
+    const RenderCamera* cam,
+    float aperture,
+    XYZV* out_pixels
 );
 
 #ifdef __cplusplus

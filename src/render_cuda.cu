@@ -49,6 +49,8 @@ extern "C" void cuda_init() {
 }
 
 XYZV* d_pixels = NULL;
+Star* d_stars = NULL;
+int d_num_stars = 0;
 cudaTextureObject_t moon_tex_obj = 0;
 cudaArray* moon_tex_array = NULL;
 
@@ -56,6 +58,11 @@ extern "C" void cuda_cleanup() {
     if (d_pixels) {
         cudaFree(d_pixels);
         d_pixels = NULL;
+    }
+    if (d_stars) {
+        cudaFree(d_stars);
+        d_stars = NULL;
+        d_num_stars = 0;
     }
     if (moon_tex_obj) {
         cudaDestroyTextureObject(moon_tex_obj);
@@ -246,6 +253,32 @@ __global__ void render_kernel(
     }
     
     out_pixels[y * width + x] = dev_spectrum_to_xyzv(&L);
+}
+
+extern "C" bool cuda_upload_stars(const Star* stars, int num_stars) {
+    if (num_stars <= 0) return true;
+    
+    if (d_stars != NULL && d_num_stars < num_stars) {
+        cudaFree(d_stars);
+        d_stars = NULL;
+    }
+    
+    if (d_stars == NULL) {
+        cudaError_t err = cudaMalloc((void**)&d_stars, num_stars * sizeof(Star));
+        if (err != cudaSuccess) {
+            printf("CUDA Error: Failed to allocate star buffer: %s\n", cudaGetErrorString(err));
+            return false;
+        }
+        d_num_stars = num_stars;
+    }
+    
+    cudaError_t err = cudaMemcpy(d_stars, stars, num_stars * sizeof(Star), cudaMemcpyHostToDevice);
+    if (err != cudaSuccess) {
+        printf("CUDA Error: Failed to copy stars to GPU: %s\n", cudaGetErrorString(err));
+        return false;
+    }
+    
+    return true;
 }
 
 extern "C" bool cuda_render_frame(
