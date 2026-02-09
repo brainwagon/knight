@@ -14,11 +14,11 @@ This plan outlines the steps to migrate star rendering to the GPU using CUDA, si
 - [x] Task: Write a test in `tests/test_cuda_stars.c` to verify successful star data transfer to the GPU. [d573aa3]
 - [x] Task: Conductor - User Manual Verification 'Phase 2: CUDA Star Data Management' (Protocol in workflow.md) [56c4395]
 
-## Phase 3: GPU Star Rendering Kernel
-- [ ] Task: Implement `render_stars_kernel` in `src/render_cuda.cu` using the simplified 550nm PSF logic and `atomicAdd` for accumulation into the HDR buffer.
-- [ ] Task: Implement the `cuda_render_stars` host function to configure and launch the star rendering kernel.
-- [ ] Task: Create a parity test in `tests/test_gpu_stars.c` that renders a small set of stars in both CPU and GPU modes and asserts that the resulting HDR values are consistent.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: GPU Star Rendering Kernel Implementation' (Protocol in workflow.md)
+## Phase 3: GPU Star Rendering Kernel [checkpoint: e1e52c8]
+- [x] Task: Implement `render_stars_kernel` in `src/render_cuda.cu` using the simplified 550nm PSF logic and `atomicAdd` for accumulation into the HDR buffer. [475ea37]
+- [x] Task: Implement the `cuda_render_stars` host function to configure and launch the star rendering kernel. [475ea37]
+- [x] Task: Create a parity test in `tests/test_gpu_stars.c` that renders a small set of stars in both CPU and GPU modes and asserts that the resulting HDR values are consistent. [475ea37]
+- [x] Task: Conductor - User Manual Verification 'Phase 3: GPU Star Rendering Kernel Implementation' (Protocol in workflow.md) [e1e52c8]
 
 ## Phase 4: Full Integration & Optimization
 - [ ] Task: Update `src/main.c` to invoke `cuda_upload_stars` and `cuda_render_stars` when the renderer is in GPU mode.
