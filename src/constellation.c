@@ -232,6 +232,16 @@ void draw_label_centered(ImageRGB* img, int x, int y, const char* label, float r
     }
 }
 
+void draw_label_offset(ImageRGB* img, int x, int y, int offset_x, const char* label, RGB color) {
+    int len = (int)strlen(label);
+    int start_x = x + offset_x;
+    int start_y = y - 4; // Vertically center 8x8 font
+
+    for (int i = 0; i < len; i++) {
+        draw_char(img, start_x + i * 8, start_y, label[i], color.r, color.g, color.b);
+    }
+}
+
 void free_constellation_boundaries(ConstellationBoundary* boundary) {
     if (boundary->vertices) {
         free(boundary->vertices);

@@ -62,6 +62,9 @@ void draw_char(ImageRGB* img, int x, int y, char c, float r, float g, float b);
 // Draw a centered 3-letter abbreviation
 void draw_label_centered(ImageRGB* img, int x, int y, const char* label, float r, float g, float b);
 
+// Draw a label with an X offset, vertically centered
+void draw_label_offset(ImageRGB* img, int x, int y, int offset_x, const char* label, RGB color);
+
 // Free constellation boundaries
 void free_constellation_boundaries(ConstellationBoundary* boundary);
 

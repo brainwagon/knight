@@ -446,6 +446,64 @@ int main(int argc, char** argv) {
     ImageRGB* output = image_rgb_create(cfg.width, cfg.height);
     apply_night_post_processing(hdr, output, cfg.exposure_boost);
 
+    if (cfg.label_bodies) {
+        printf("Labeling Celestial Bodies...\n");
+        // Label Planets
+        for (int i = 0; i < 5; i++) {
+            Planet p = planets[i];
+            if (p.alt <= 0) continue;
+            float px, py;
+            if (cfg.env_map) {
+                float p_az_deg = atan2f(p.direction.x, p.direction.z) * RAD2DEG;
+                if (p_az_deg < 0) p_az_deg += 360.0f;
+                px = (p_az_deg / 360.0f) * cfg.width;
+                py = (90.0f - p.alt*RAD2DEG) / 180.0f * cfg.height;
+            } else {
+                float dz = vec3_dot(p.direction, cam_forward);
+                if (dz <= 0) continue; 
+                px = (vec3_dot(p.direction, cam_right) / dz / (aspect * tan_half_fov) + 1.0f) * 0.5f * cfg.width;
+                py = (1.0f - vec3_dot(p.direction, cam_up) / dz / tan_half_fov) * 0.5f * cfg.height;
+            }
+            if (px >= 0 && px < cfg.width && py >= 0 && py < cfg.height) {
+                draw_label_offset(output, (int)px, (int)py, 8, p.name, cfg.label_color);
+            }
+        }
+        // Label Sun
+        if (s_alt > 0) {
+            float px, py;
+            if (cfg.env_map) {
+                px = (s_az / 360.0f) * cfg.width;
+                py = (90.0f - s_alt) / 180.0f * cfg.height;
+            } else {
+                float dz = vec3_dot(sun_dir, cam_forward);
+                if (dz > 0) {
+                    px = (vec3_dot(sun_dir, cam_right) / dz / (aspect * tan_half_fov) + 1.0f) * 0.5f * cfg.width;
+                    py = (1.0f - vec3_dot(sun_dir, cam_up) / dz / tan_half_fov) * 0.5f * cfg.height;
+                    if (px >= 0 && px < cfg.width && py >= 0 && py < cfg.height) {
+                        draw_label_offset(output, (int)px, (int)py, 8, "Sun", cfg.label_color);
+                    }
+                }
+            }
+        }
+        // Label Moon
+        if (cfg.render_moon && m_alt > 0) {
+            float px, py;
+            if (cfg.env_map) {
+                px = (m_az / 360.0f) * cfg.width;
+                py = (90.0f - m_alt) / 180.0f * cfg.height;
+            } else {
+                float dz = vec3_dot(moon_dir, cam_forward);
+                if (dz > 0) {
+                    px = (vec3_dot(moon_dir, cam_right) / dz / (aspect * tan_half_fov) + 1.0f) * 0.5f * cfg.width;
+                    py = (1.0f - vec3_dot(moon_dir, cam_up) / dz / tan_half_fov) * 0.5f * cfg.height;
+                    if (px >= 0 && px < cfg.width && py >= 0 && py < cfg.height) {
+                        draw_label_offset(output, (int)px, (int)py, 8, "Moon", cfg.label_color);
+                    }
+                }
+            }
+        }
+    }
+
     if (cfg.render_outlines && constellations.count > 0 && !cfg.env_map) {
         printf("Drawing Constellation Outlines and Labels...\n");
         draw_constellation_outlines(output, &constellations, cam_forward, cam_up, cam_right, tan_half_fov, aspect, cfg.outline_color);
