@@ -17,4 +17,5 @@ Knight is a physically-based night sky rendering engine written in vanilla C. It
 - **Advanced Atmospheric Simulation**: Realistic Rayleigh and Mie scattering models with spectral ray marching through a spherical atmosphere.
 - **Accurate Celestial Positioning**: High-precision ephemerides for the Sun, Moon, and major planets, integrated with the Yale Bright Star Catalog.
 - **Night-Time Perception**: Simulation of scotopic vision effects, including the Purkinje shift, rod saturation, and stellar bloom.
+- **Constellation Outlines**: Ability to render accurate IAU constellation boundaries based on J2000 coordinate data.
 - **Flexible Output**: Support for HDR output (PFM) and conversion to standard formats (PNG) for various use cases, including environment mapping.

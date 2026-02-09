@@ -19,3 +19,4 @@
 
 ## External Data Sources
 - **Yale Bright Star Catalog (YBSC5)**: Provides the fundamental data (coordinates, magnitudes, spectral types) for rendering the night sky's stars.
+- **IAU Constellation Boundaries**: Uses `data/bound_in_20.txt` for defining the vertices of constellation polygons in J2000 coordinates.
