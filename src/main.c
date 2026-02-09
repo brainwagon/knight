@@ -393,35 +393,19 @@ int main(int argc, char** argv) {
     if (num_stars > 0) {
         printf("Rendering Stars...\n");
         star_equ_to_horizon(jd, cfg.lat, cfg.lon, stars, num_stars);
-        int on_screen_stars = 0;
-        for (int i = 0; i < num_stars; i++) {
-            Star s = stars[i];
-            if (s.direction.y <= 0) continue; 
-            float px, py;
-            if (cfg.env_map) {
-                float s_az = atan2f(s.direction.x, s.direction.z) * RAD2DEG;
-                if (s_az < 0) s_az += 360.0f;
-                px = (s_az / 360.0f) * cfg.width;
-                py = (90.0f - asinf(s.direction.y) * RAD2DEG) / 180.0f * cfg.height;
-            } else {
-                float dz = vec3_dot(s.direction, cam_forward);
-                if (dz <= 0) continue; 
-                px = (vec3_dot(s.direction, cam_right) / dz / (aspect * tan_half_fov) + 1.0f) * 0.5f * cfg.width;
-                py = (1.0f - vec3_dot(s.direction, cam_up) / dz / tan_half_fov) * 0.5f * cfg.height;
-            }
-            if (px >= 0 && px < cfg.width && py >= 0 && py < cfg.height) {
-                float t0, t1;
-                if (ray_sphere_intersect(cam_pos, s.direction, EARTH_RADIUS, &t0, &t1)) continue;
-                on_screen_stars++;
-                float solid_angle = cfg.env_map ? (TWO_PI/cfg.width)*(PI/cfg.height)*cosf(asinf(s.direction.y)) : (4.0f*tan_half_fov*tan_half_fov*aspect)/(cfg.width*cfg.height);
-                float radiance = powf(10.0f, -0.4f * s.vmag) * 2.0e-5f / (solid_angle + 1e-12f);
-                float T = expf(-0.1f / (s.direction.y + 0.01f)); 
-                int idx = (int)py * cfg.width + (int)px;
-                hdr->pixels[idx].Y += radiance * T; hdr->pixels[idx].X += radiance * T; 
-                hdr->pixels[idx].Z += radiance * T; hdr->pixels[idx].V += radiance * T; 
-            }
-        }
-        printf("Stars on screen: %d\n", on_screen_stars);
+        
+        RenderCamera rcam;
+        rcam.width = cfg.width;
+        rcam.height = cfg.height;
+        rcam.aspect = aspect;
+        rcam.tan_half_fov = tan_half_fov;
+        rcam.pos = cam_pos;
+        rcam.forward = cam_forward;
+        rcam.up = cam_up;
+        rcam.right = cam_right;
+        rcam.env_map = cfg.env_map;
+
+        render_stars(stars, num_stars, &rcam, cfg.aperture, hdr);
     }
 
     printf("Rendering Planets...\n");
