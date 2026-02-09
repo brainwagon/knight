@@ -20,8 +20,8 @@ This plan outlines the steps to migrate star rendering to the GPU using CUDA, si
 - [x] Task: Create a parity test in `tests/test_gpu_stars.c` that renders a small set of stars in both CPU and GPU modes and asserts that the resulting HDR values are consistent. [475ea37]
 - [x] Task: Conductor - User Manual Verification 'Phase 3: GPU Star Rendering Kernel Implementation' (Protocol in workflow.md) [e1e52c8]
 
-## Phase 4: Full Integration & Optimization
-- [ ] Task: Update `src/main.c` to invoke `cuda_upload_stars` and `cuda_render_stars` when the renderer is in GPU mode.
-- [ ] Task: Refactor `src/main.c` to ensure star coordinates are converted to horizon space before being passed to the GPU renderer.
-- [ ] Task: Perform manual verification by rendering a Tycho-2 scene with thousands of stars and comparing CPU vs. GPU performance and visual parity.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Full Integration & Optimization' (Protocol in workflow.md)
+## Phase 4: Full Integration & Optimization [checkpoint: 5488ea7]
+- [x] Task: Update `src/main.c` to invoke `cuda_upload_stars` and `cuda_render_stars` when the renderer is in GPU mode. [0502cd5]
+- [x] Task: Refactor `src/main.c` to ensure star coordinates are converted to horizon space before being passed to the GPU renderer. [0502cd5]
+- [x] Task: Perform manual verification by rendering a Tycho-2 scene with thousands of stars and comparing CPU vs. GPU performance and visual parity. [0502cd5]
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Full Integration & Optimization' (Protocol in workflow.md) [5488ea7]
