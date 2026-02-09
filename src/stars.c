@@ -86,12 +86,10 @@ int load_stars(const char* filepath, float mag_limit, Star** stars) {
 void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, float aperture, ImageHDR* hdr) {
     init_cie_cache();
 
-    float sigmas_ang[SPECTRUM_BANDS];
-    for (int i = 0; i < SPECTRUM_BANDS; i++) {
-        float lambda_nm = 380.0f + i * 10.0f;
-        float theta = 1.22f * (lambda_nm * 1e-9f) / (aperture * 1e-3f);
-        sigmas_ang[i] = theta * 0.42f;
-    }
+    // Constant sigma based on 550nm wavelength
+    float lambda_550nm = 550.0f;
+    float theta_550nm = 1.22f * (lambda_550nm * 1e-9f) / (aperture * 1e-3f);
+    float sigma_ang = theta_550nm * 0.42f;
 
     float pinhole_f_px = 0;
     if (!cam->env_map) {
@@ -122,44 +120,49 @@ void render_stars(const Star* stars, int num_stars, const RenderCamera* cam, flo
         
         XYZV xyz_bb = spectrum_to_xyzv(&spec);
         float flux = powf(10.0f, -0.4f * s.vmag) * 2.0e-5f;
-        spectrum_mul(&spec, flux / (xyz_bb.Y + 1e-20f));
+        spectrum_mul(&spec, flux / (xyz_bb.V + 1e-20f));
 
         float T = expf(-0.1f / (s.direction.y + 0.01f)); 
         spectrum_mul(&spec, T);
 
-        for (int b = 0; b < SPECTRUM_BANDS; b++) {
-            float sigma_px;
-            if (cam->env_map) {
-                sigma_px = sigmas_ang[b] * cam->width / 6.283185f;
-            } else {
-                sigma_px = sigmas_ang[b] * pinhole_f_px;
-            }
-            
-            int radius = (int)(sigma_px * 4.0f) + 1;
-            int x_start = (int)px - radius;
-            int x_end = (int)px + radius;
-            int y_start = (int)py - radius;
-            int y_end = (int)py + radius;
+        XYZV star_xyzv = spectrum_to_xyzv(&spec);
 
-            if (x_start < 0) x_start = 0;
-            if (x_end >= cam->width) x_end = cam->width - 1;
-            if (y_start < 0) y_start = 0;
-            if (y_end >= cam->height) y_end = cam->height - 1;
+        float sigma_px;
+        float solid_angle;
+        if (cam->env_map) {
+            sigma_px = sigma_ang * cam->width / 6.283185f;
+            solid_angle = (6.283185f / cam->width) * (3.14159f / cam->height) * cosf(asinf(s.direction.y));
+        } else {
+            sigma_px = sigma_ang * pinhole_f_px;
+            solid_angle = (4.0f * cam->tan_half_fov * cam->tan_half_fov * cam->aspect) / (cam->width * cam->height);
+        }
+        
+        // Ensure PSF is at least sub-pixel sized to avoid aliasing/disappearance
+        if (sigma_px < 0.5f) sigma_px = 0.5f;
 
-            float val_band = spec.s[b];
-            XYZV xyz_base = CIE_XYZV_weighted[b];
+        int radius = (int)(sigma_px * 4.0f) + 1;
+        int x_start = (int)px - radius;
+        int x_end = (int)px + radius;
+        int y_start = (int)py - radius;
+        int y_end = (int)py + radius;
 
-            for (int iy = y_start; iy <= y_end; iy++) {
-                for (int ix = x_start; ix <= x_end; ix++) {
-                    float weight = integrate_gaussian_2d((float)ix - px, (float)iy - py, (float)ix + 1.0f - px, (float)iy + 1.0f - py, sigma_px);
-                    float energy = val_band * weight;
-                    
-                    int idx = iy * cam->width + ix;
-                    hdr->pixels[idx].X += energy * xyz_base.X;
-                    hdr->pixels[idx].Y += energy * xyz_base.Y;
-                    hdr->pixels[idx].Z += energy * xyz_base.Z;
-                    hdr->pixels[idx].V += energy * xyz_base.V;
-                }
+        if (x_start < 0) x_start = 0;
+        if (x_end >= cam->width) x_end = cam->width - 1;
+        if (y_start < 0) y_start = 0;
+        if (y_end >= cam->height) y_end = cam->height - 1;
+
+        float rad_factor = 1.0f / (solid_angle + 1e-15f);
+
+        for (int iy = y_start; iy <= y_end; iy++) {
+            for (int ix = x_start; ix <= x_end; ix++) {
+                float weight = integrate_gaussian_2d((float)ix - px, (float)iy - py, (float)ix + 1.0f - px, (float)iy + 1.0f - py, sigma_px);
+                float f = weight * rad_factor;
+                
+                int idx = iy * cam->width + ix;
+                hdr->pixels[idx].X += star_xyzv.X * f;
+                hdr->pixels[idx].Y += star_xyzv.Y * f;
+                hdr->pixels[idx].Z += star_xyzv.Z * f;
+                hdr->pixels[idx].V += star_xyzv.V * f;
             }
         }
     }

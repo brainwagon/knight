@@ -26,8 +26,9 @@ void test_psf_resolution_independence() {
     ImageHDR* hdr1 = image_hdr_create(100, 100);
     render_stars(&s, 1, &cam1, 6.0f, hdr1);
 
+    float sa1 = (4.0f * cam1.tan_half_fov * cam1.tan_half_fov * cam1.aspect) / (cam1.width * cam1.height);
     float total_y1 = 0;
-    for (int i = 0; i < 100 * 100; i++) total_y1 += hdr1->pixels[i].Y;
+    for (int i = 0; i < 100 * 100; i++) total_y1 += hdr1->pixels[i].Y * sa1;
 
     RenderCamera cam2 = cam1;
     cam2.width = 200;
@@ -35,16 +36,18 @@ void test_psf_resolution_independence() {
     ImageHDR* hdr2 = image_hdr_create(200, 200);
     render_stars(&s, 1, &cam2, 6.0f, hdr2);
 
+    float sa2 = (4.0f * cam2.tan_half_fov * cam2.tan_half_fov * cam2.aspect) / (cam2.width * cam2.height);
     float total_y2 = 0;
-    for (int i = 0; i < 200 * 200; i++) total_y2 += hdr2->pixels[i].Y;
+    for (int i = 0; i < 200 * 200; i++) total_y2 += hdr2->pixels[i].Y * sa2;
 
-    printf("Total Y (100x100): %e\\n", (double)total_y1);
-    printf("Total Y (200x200): %e\\n", (double)total_y2);
+    printf("Total Flux (100x100): %e\n", (double)total_y1);
+    printf("Total Flux (200x200): %e\n", (double)total_y2);
+    fflush(stdout);
     
     assert(total_y1 > 0);
     float diff = fabsf(total_y1 - total_y2) / (total_y1 + 1e-20f);
     assert(diff < 0.01f);
-    printf("test_psf_resolution_independence passed\\n");
+    printf("test_psf_resolution_independence passed\n");
 
     image_hdr_free(hdr1);
     image_hdr_free(hdr2);
