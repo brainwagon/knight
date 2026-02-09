@@ -1,0 +1,8 @@
+{
+  "track_id": "eliminate_warnings_20260209",
+  "type": "bugfix",
+  "status": "new",
+  "created_at": "2026-02-09T15:00:00Z",
+  "updated_at": "2026-02-09T15:00:00Z",
+  "description": "Eliminate all compiler warnings from gcc and nvcc."
+}
