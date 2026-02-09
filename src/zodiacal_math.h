@@ -30,7 +30,6 @@ static inline HD void horizon_to_ecliptic_math(float alt, float az, float lat_de
     float sin_beta = sin_dec * cosf(EPSILON_RAD) - cos_dec * sinf(EPSILON_RAD) * sinf(ra);
     *ecl_lat = asinf(sin_beta);
     
-    float cos_beta = cosf(*ecl_lat);
     float sin_lambda_part = sin_dec * sinf(EPSILON_RAD) + cos_dec * cosf(EPSILON_RAD) * sinf(ra);
     float cos_lambda_part = cos_dec * cosf(ra);
     
@@ -39,6 +38,7 @@ static inline HD void horizon_to_ecliptic_math(float alt, float az, float lat_de
 }
 
 static inline HD Spectrum compute_zodiacal_light_math(Vec3 view_dir, Vec3 sun_dir, float sun_ecliptic_lon_deg, float cam_lat, float lmst) {
+    (void)sun_dir;
     Spectrum result;
     spectrum_zero(&result);
     

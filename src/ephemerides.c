@@ -39,6 +39,7 @@ static void get_sun_equatorial(double jd, float* ra, float* dec) {
     double lambda = L + 1.915 * sin(g * DEG2RAD) + 0.020 * sin(2 * g * DEG2RAD); // Ecliptic longitude
     double epsilon = 23.439 - 0.0000004 * n; // Obliquity of ecliptic
     
+    double l_rad = lambda * DEG2RAD;
     double e_rad = epsilon * DEG2RAD;
     
     // Convert to RA/Dec
