@@ -37,6 +37,12 @@ bool project_vertex(Vec3 v_dir, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float
 // Draw constellation outlines to the final image buffer (post-tonemapping)
 void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Vec3 cam_fwd, Vec3 cam_up, Vec3 cam_right, float tan_half_fov, float aspect);
 
+// Draw a single 8x8 character
+void draw_char(Image* img, int x, int y, char c, uint8_t r, uint8_t g, uint8_t b);
+
+// Draw a centered 3-letter abbreviation
+void draw_label_centered(Image* img, int x, int y, const char* label, uint8_t r, uint8_t g, uint8_t b);
+
 // Free constellation boundaries
 void free_constellation_boundaries(ConstellationBoundary* boundary);
 

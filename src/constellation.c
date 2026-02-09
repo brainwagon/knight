@@ -1,5 +1,6 @@
 #include "constellation.h"
 #include "ephemerides.h"
+#include "font8x8.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -114,6 +115,38 @@ void draw_constellation_outlines(Image* img, ConstellationBoundary* boundary, Ve
             // Subtle blue-grey for outlines
             draw_line(img, (int)x0, (int)y0, (int)x1, (int)y1, 60, 70, 90);
         }
+    }
+}
+
+void draw_char(Image* img, int x, int y, char c, uint8_t r, uint8_t g, uint8_t b) {
+    if (c < 32 || c >= 127) return;
+    const uint8_t* glyph = font8x8_basic[(int)c];
+    if (!glyph) return;
+
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            if (glyph[row] & (1 << col)) {
+                int px = x + col;
+                int py = y + row;
+                if (px >= 0 && px < img->width && py >= 0 && py < img->height) {
+                    int idx = (py * img->width + px) * 3;
+                    img->data[idx + 0] = r;
+                    img->data[idx + 1] = g;
+                    img->data[idx + 2] = b;
+                }
+            }
+        }
+    }
+}
+
+void draw_label_centered(Image* img, int x, int y, const char* label, uint8_t r, uint8_t g, uint8_t b) {
+    int len = (int)strlen(label);
+    int total_width = len * 8;
+    int start_x = x - total_width / 2;
+    int start_y = y - 4; // Center of 8x8 font
+
+    for (int i = 0; i < len; i++) {
+        draw_char(img, start_x + i * 8, start_y, label[i], r, g, b);
     }
 }
 

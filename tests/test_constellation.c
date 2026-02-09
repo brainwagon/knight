@@ -197,7 +197,265 @@ void test_equ_to_horizon() {
 
 
 
+void test_draw_char() {
+
+
+
+
+
+
+
+
+
+
+
+    Image img;
+
+
+
+
+
+
+
+
+
+
+
+    img.width = 16;
+
+
+
+
+
+
+
+
+
+
+
+    img.height = 16;
+
+
+
+
+
+
+
+
+
+
+
+    img.channels = 3;
+
+
+
+
+
+
+
+
+
+
+
+    img.data = (unsigned char*)calloc(img.width * img.height * img.channels, 1);
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    // Draw 'A' at 0,0
+
+
+
+
+
+
+
+
+
+
+
+    draw_char(&img, 0, 0, 'A', 255, 255, 255);
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    // Check top of 'A' (0x18 = 00011000)
+
+
+
+
+
+
+
+
+
+
+
+    // Row 0, Col 3 and 4 should be white
+
+
+
+
+
+
+
+
+
+
+
+    int idx3 = (0 * 16 + 3) * 3;
+
+
+
+
+
+
+
+
+
+
+
+    int idx4 = (0 * 16 + 4) * 3;
+
+
+
+
+
+
+
+
+
+
+
+    assert(img.data[idx3] == 255);
+
+
+
+
+
+
+
+
+
+
+
+    assert(img.data[idx4] == 255);
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    free(img.data);
+
+
+
+
+
+
+
+
+
+
+
+    printf("test_draw_char passed\n");
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int main() {
+
+
+
+
+
+
 
 
 
@@ -209,7 +467,19 @@ int main() {
 
 
 
+
+
+
+
+
+
     test_load_boundaries();
+
+
+
+
+
+
 
 
 
@@ -221,7 +491,31 @@ int main() {
 
 
 
+
+
+
+
+
+
+    test_draw_char();
+
+
+
+
+
+
+
+
+
+
+
     printf("All constellation tests passed!\n");
+
+
+
+
+
+
 
 
 
@@ -233,7 +527,25 @@ int main() {
 
 
 
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
